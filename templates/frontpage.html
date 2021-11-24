@@ -1,0 +1,260 @@
+<html>
+<head>
+	<title>Speech Feature Online prototype</title>
+</head>
+<body>
+<h1>
+	Speech Feature Online prototype
+</h1>
+<br>
+This prototype allows users to use <a href="https://docs.cognitive-ml.fr/shennong/index.html">Shennong</a> to analyse audio files from within their web browser.<br>
+Choose your audio files (mp3, wav, ogg, flac).<br> 
+Adjust your settings (initially set to Shennong defaults).
+Select the available <a href="https://docs.cognitive-ml.fr/shennong/intro_features.html">Shennong Features</a> you would like to extract.<br>
+Submit. Download your results.<br>
+<br>
+
+<form action="process" enctype="multipart/form-data" method="post">
+
+	<label for="files" class="form-label">Select your audio files:</label>
+	<br>
+	<input class="form-control" type="file" id="files" name="files" multiple>
+	<br><br>
+	
+	<h3>General settings</h3>
+	<label for="channel">Which channel to keep for stereo audio (1 or 2):</label>
+		<input type="num" id="channel" name="channel" value="1"><br>
+	<label for="fr_len">Frame length (seconds):</label>
+		<input type="num" id="fr_len" name="fr_len" value="0.025"><br>
+	<label for="fr_sh">Frame shift (seconds):</label>
+		<input type="num" id="fr_sh" name="fr_sh" value="0.01"><br>
+	<label for="window">Window type 
+		(<a href="https://www.audiolabs-erlangen.de/resources/MIR/FMP/C2/C2_STFT-Window.html">?1</a> 
+		<a href="https://support.ircam.fr/docs/AudioSculpt/3.0/co/Window%20Step.html">?2</a> 
+		<a href="https://jscholarship.library.jhu.edu/bitstream/handle/1774.2/62248/GHAHREMANI-DISSERTATION-2019.pdf?sequence=1">?3</a>)...:
+			</label>
+		<input type="radio" name="window" value="povey" checked>Povey
+		<input type="radio" name="window" value="hamming">Hamming
+		<input type="radio" name="window" value="hanning">Hanning
+		<input type="radio" name="window" value="rectangular">Rectangular
+		<input type="radio" name="window" value="blackman">Blackman<br>
+	<label for="snip">Snip edges:</label>
+		<input type="checkbox" id="snip" name="snip" value="true" checked>
+	<br><br>
+	
+	<h3>Shennong Features</h3>
+	(see <a href="https://docs.cognitive-ml.fr/shennong/intro_features.html">intro</a> and <a href="https://docs.cognitive-ml.fr/shennong/python/index.html">details</a>)<br>
+	<div class="row">
+		<div class="column">
+		<label for="spectro"><b>Spectrogram</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/spectrogram.html">?</a>)</label>
+		<input type="hidden" id="spectro" name="spectro" value="false">
+		<input type="checkbox" id="spectro" name="spectro" value="true">
+		</div>
+		<div class="column">
+			<div class="spectro_extras">
+			<i>Post-processing</i>:
+			<label for="spectro_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="hidden" id="spectro_cmvn" name="spectro_cmvn" value="false">
+				<input type="checkbox" id="spectro_cmvn" name="spectro_cmvn" value="true">
+			<label for="spectro_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="spectro_delta" name="spectro_delta" value="false">
+				<input type="checkbox" id="spectro_delta" name="spectro_delta" value="true">
+			<!--<label for="spectro_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="checkbox" id="spectro_vad" name="spectro_vad" value="true">-->
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="filt"><b>Filterbank</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/filterbank.html">?</a>)</label>
+		<input type="hidden" id="filt" name="filt" value="false">
+		<input type="checkbox" id="filt" name="filt" value="true">
+		</div>
+		<div class="filt_extras">
+			<div class="column">
+			<i>Post-processing</i>:
+			<label for="filt_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="hidden" id="filt_cmvn" name="filt_cmvn" value="false">
+				<input type="checkbox" id="filt_cmvn" name="filt_cmvn" value="true">
+			<label for="filt_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="filt_delta" name="filt_delta" value="false">
+				<input type="checkbox" id="filt_delta" name="filt_delta" value="true">
+			<!--<label for="filt_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="checkbox" id="filt_vad" name="filt_vad" value="true">-->
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="mfcc"><b>MFCC</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/mfcc.html">?</a>)</label>
+		<input type="hidden" id="mfcc" name="mfcc" value="false">
+		<input type="checkbox" id="mfcc" name="mfcc" value="true">
+		</div>
+		<div class="mfcc_extras">
+			<div class="column">
+			<i>Post-processing</i>:
+			<label for="mfcc_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="hidden" id="mfcc_cmvn" name="mfcc_cmvn" value="false">
+				<input type="checkbox" id="mfcc_cmvn" name="mfcc_cmvn" value="true">
+			<label for="mfcc_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="mfcc_delta" name="mfcc_delta" value="false">
+				<input type="checkbox" id="mfcc_delta" name="mfcc_delta" value="true">
+			<label for="mfcc_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="hidden" id="mfcc_vad" name="mfcc_vad" value="false">
+				<input type="checkbox" id="mfcc_vad" name="mfcc_vad" value="True">
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="plp"><b>PLP</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/plp.html">?</a>)</label>
+		<input type="hidden" id="plp" name="plp" value="false">
+		<input type="checkbox" id="plp" name="plp" value="True">
+		</div>
+		<div class="plp_extras">
+			<div class="column">
+			<i>Post-processing</i>:
+			<label for="plp_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="hidden" id="plp_cmvn" name="plp_cmvn" value="false">
+				<input type="checkbox" id="plp_cmvn" name="plp_cmvn" value="True">
+			<label for="plp_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="plp_delta" name="plp_delta" value="false">
+				<input type="checkbox" id="plp_delta" name="plp_delta" value="True">
+			<label for="plp_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="hidden" id="plp_vad" name="plp_vad" value="false">
+				<input type="checkbox" id="plp_vad" name="plp_vad" value="True">
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="p_kaldi"><b>Pitch estimation (Kaldi)</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/pitch_kaldi.html">?</a>)</label>
+		<input type="hidden" id="p_kaldi" name="p_kaldi" value="false">
+		<input type="checkbox" id="p_kaldi" name="p_kaldi" value="True">
+		</div>
+		<div class="p_kaldi_extras">
+			<div class="column">
+			<label for="min_k">F0 min (Hz):</label>
+				<input type="num" id="min_k" value="50">
+			<label for="max_k">F0 max (Hz):</label>	
+				<input type="num" id="max_k" value="400">		
+			</div>
+			<div class="column">
+			<i>Post-processing</i>:
+			<!--<label for="p_kaldi_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="checkbox" id="p_kaldi_cmvn" name="p_kaldi_cmvn" value="True">-->
+			<label for="p_kaldi_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="p_kaldi_delta" name="p_kaldi_delta" value="false">
+				<input type="checkbox" id="p_kaldi_delta" name="p_kaldi_delta" value="True">
+			<!--<label for="p_kaldi_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="checkbox" id="p_kaldi_vad" name="p_kaldi_vad" value="True">-->
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="p_crepe"><b>Pitch estimation (Crepe)</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/pitch_crepe.html">?</a>)</label>
+		<input type="hidden" id="p_crepe" name="p_crepe" value="false">
+		<input type="checkbox" id="p_crepe" name="p_crepe" value="True">
+		</div>
+		<div class="p_crepe_extras">
+			<div class="column">
+			<i>Post-processing</i>:
+			<!--<label for="p_crepe_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="checkbox" id="p_crepe_cmvn" name="p_crepe_cmvn" value="True">-->
+			<label for="p_crepe_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="p_crepe_delta" name="p_crepe_delta" value="false">
+				<input type="checkbox" id="p_crepe_delta" name="p_crepe_delta" value="True">
+			<!--<label for="p_crepe_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="checkbox" id="p_crepe_vad" name="p_crepe_vad" value="True">-->
+			</div>
+		</div>
+	</div><br>
+	<div class="row">
+		<div class="column">
+		<label for="energy"><b>Energy</b> (<a href="https://docs.cognitive-ml.fr/shennong/python/processor/energy.html">?</a>)</label>
+		<input type="hidden" id="energy" name="energy" value="false">
+		<input type="checkbox" id="energy" name="energy" value="True">
+		</div>
+		<div class="column">
+			<div class="energy_extras">
+			<i>Post-processing</i>:
+			<label for="energy_cmvn">Include in CMVN stats (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/cmvn.html">?</a>)</label>
+				<input type="hidden" id="energy_cmvn" name="energy_cmvn" value="false">
+				<input type="checkbox" id="energy_cmvn" name="energy_cmvn" value="True">
+			<label for="energy_delta">Delta features (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/delta.html">?</a>)</label>
+				<input type="hidden" id="energy_delta" name="energy_delta" value="false">
+				<input type="checkbox" id="energy_delta" name="energy_delta" value="True">
+			<!--<label for="energy_vad">Voice Activity Detection (<a href="https://docs.cognitive-ml.fr/shennong/python/postprocessor/vad.html">?</a>)</label>
+				<input type="checkbox" id="energy_vad" name="energy_vad" value="True">-->
+			</div>
+		</div>
+	</div>
+	<br>
+
+	<h3>Results options</h3>
+	Your results will arrive in .zip format. The .zip archive will contain 1 data file per audio file submitted.<br>
+	Please select the format for your data files, among <a href="https://docs.cognitive-ml.fr/shennong/python/features.html#module-shennong.features_collection">those Shennong supports</a>.
+		<input type="radio" name="res" value="csv" checked>.csv
+		<input type="radio" name="res" value="pkl">.pkl
+		<input type="radio" name="res" value="h5f">.h5f
+		<input type="radio" name="res" value="npz">.npz
+		<input type="radio" name="res" value="mat">.mat
+		<input type="radio" name="res" value="ark">.ark
+
+	<input onclick="change()" type="submit" value="submit">
+</form>
+
+<script>
+.hide{
+display: none;
+}
+document.getElementById("spectro").onchange = function(){
+  var extra = document.getElementsByClassName("spectro_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("filt").onchange = function(){
+  var extra = document.getElementsByClassName("filt_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("mfcc").onchange = function(){
+  var extra = document.getElementsByClassName("mfcc_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("plp").onchange = function(){
+  var extra = document.getElementsByClassName("plp_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("onehot").onchange = function(){
+  var extra = document.getElementsByClassName("onehot_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("p_kaldi").onchange = function(){
+  var extra = document.getElementsByClassName("p_kaldi_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("p_crepe").onchange = function(){
+  var extra = document.getElementsByClassName("p_crepe_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+document.getElementById("energy").onchange = function(){
+  var extra = document.getElementsByClassName("energy_extras")[0];
+  if (this.checked) extra.classList.remove('hide');
+  else extra.classList.add('hide');
+}
+function change(){
+    var elem = document.getElementById("submit");
+    if (elem.value=="submit") elem.value = "processing";
+}
+</script>
+
+</body>
+</html>
+
