@@ -10,7 +10,6 @@ In order to host SFO, a Python environment with FastAPI and Shennong installed i
 ![Screenshot of Speech Feature Online: plain HTML page with checkboxes and text fields](screenshot.png)  
   
 Once you have a Python environment with the aforementioned dependencies installed:  
-*(And once the program's rocky start bugs have been fixed up...)*
   
   1. Open a command shell
   2. Navigate to ~/speech_feature_online/  
@@ -29,10 +28,10 @@ If you're on Windows, like the author of this program, you can work around this 
 `prototype.py` : the all-in-one script with Shennong implementation and front page FastAPI app  
   
   * `analyser (file: str, subdir: str, fts: list, settings: dict)`: takes audio file and user-specified settings and performs Shennong analysis on the file, saving results to disk  
-      * results are collected **per audio file**: example.wav → example_features.csv {example_spectrogram, example_mfcc, example_pitch_kaldi, ...}  
-	  and **not** per feature: example1.wav, example2.wav → mfcc.csv {example1_mfcc, example2_mfcc}  
-	  * per-feature analysers are an option for the future, but they'd require re-thinking CMVN post-processing (which needs a collection of features per audio file)
-  * FastAPI `/home` page: takes audio file & user specified settings, passes them to `analyser`, returns .zip file with results  
+      * results are collected **per audio file**: example.wav → example_features={example_spectrogram, example_mfcc, example_pitch_kaldi, ...}  
+	  and **not** per feature, so **not** example1.wav, example2.wav → mfcc={example1_mfcc, example2_mfcc}  
+	  * per-feature analysers are an option for the future, but for now things work as they are - we'll always have time to break it and rebuild it later
+  * FastAPI `/home` page: takes audio file(s) & user specified settings, passes them to `analyser`, returns .zip file with results  
       * audio files submitted are erased by the time the results file is returned
   
 `/templates` : HTML templates used by FastAPI   
