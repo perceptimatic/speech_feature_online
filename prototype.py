@@ -206,6 +206,7 @@ async def analyser(file: str, subdir: str, fts: list, settings: dict):
     return #("tmp/{}/results/{}_features{}".format(subdir,name,settings["res"]))
 
 
+
 # initialise our app
 app = FastAPI()
 
@@ -263,15 +264,11 @@ async def form_post(request: Request, files: List[UploadFile]=File(...),
                 or file.filename.endswith(".ogg") or file.filename.endswith(".flac")):
             html_content = """
             <html>
-            <head>
-                <title>Incorrect file format</title>
-            </head>
             <body>
-                <h1>Incorrect file format</h1>
-                The file you submitted was not an audio file we can work with.<br>
-                Please try again with one of: wav, mp3, ogg, flac
-            </body> 
-            </html>"""
+            The file you submitted was not an audio file we can work with.<br>Please try again with one of: wav, mp3, ogg, flac.
+            </body>
+            </html>
+            """
             return HTMLResponse(content=html_content)
     
     # our magnificent array of settings:
@@ -303,14 +300,22 @@ async def form_post(request: Request, files: List[UploadFile]=File(...),
     os.mkdir("tmp/{}".format(subdir))
     
     # read files and save to disk:
-    for file in files:
-        async with aiofiles.open("tmp/{}/{}".format(subdir, file.filename), 'wb') as out_file:
-            content = await file.read()  # async read
-            await out_file.write(content)
+    try: 
+        for file in files:
+            async with aiofiles.open("tmp/{}/{}".format(subdir, file.filename), 'wb') as out_file:
+                content = await file.read()  # async read
+                await out_file.write(content)
+    except: 
+        shutil.rmtree("tmp/{}/".format(subdir))
+        return templates.TemplateResponse("error.html", context={"request": request})
 
     # shennong the devil outta them:
     for file in files:
-        await analyser (file.filename, subdir, y_fts, settings)
+        try: 
+            await analyser (file.filename, subdir, y_fts, settings)
+        except:
+            shutil.rmtree("tmp/{}/".format(subdir))
+            return templates.TemplateResponse("error.html", context={"request": request})
         
     # collect results files in tmp/{}/results into a zip file:
     suffix = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -319,11 +324,15 @@ async def form_post(request: Request, files: List[UploadFile]=File(...),
         for file in files:
             results.append(os.path.join(root,file))
     
-    with ZipFile("tmp/results/results_{}_{}.zip".format(subdir,suffix), "x") as z:
-        for r in results:
-            r_t = r.split("/")
-            r_name = r_t[-2]+"/"+r_t[-1]
-            z.write(r, r_name)
+    try: 
+        with ZipFile("tmp/results/results_{}_{}.zip".format(subdir,suffix), "x") as z:
+            for r in results:
+                r_t = r.split("/")
+                r_name = r_t[-2]+"/"+r_t[-1]
+                z.write(r, r_name)
+    except:
+        shutil.rmtree("tmp/{}/".format(subdir))
+        return templates.TemplateResponse("error.html", context={"request": request})
     
     # clean out submitter's files (except results, which are saved in "results" directory):
     shutil.rmtree("tmp/{}/".format(subdir))
