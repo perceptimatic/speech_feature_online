@@ -11,4 +11,4 @@ RUN conda install -c conda-forge uvicorn
 RUN conda install aiofiles
 RUN conda install jinja2
 RUN conda install -c conda-forge python-multipart
-#CMD ["uvicorn", "prototype:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "prototype:app", "--host", "0.0.0.0", "--port", "80"]
