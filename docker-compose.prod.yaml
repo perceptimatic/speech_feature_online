@@ -1,7 +1,7 @@
 version: "3.6"
 services:
   api:
-    image: ghcr.io/cklamann/sfo-api:latest
+    image: ghcr.io/perceptimatic/sfo-api:latest
     networks:
       - speech-feature
     depends_on:
@@ -20,7 +20,7 @@ services:
       - PROCESSING_QUEUE
       - STORAGE_DRIVER=s3
   worker:
-    image: ghcr.io/cklamann/sfo-worker:latest
+    image: ghcr.io/perceptimatic/sfo-worker:latest
     networks:
       - speech-feature
     depends_on:
