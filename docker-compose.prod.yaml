@@ -1,7 +1,7 @@
 version: "3.6"
 services:
   api:
-    # image: ghcr.io/perceptimatic/sfo-api:latest
+    image: ghcr.io/perceptimatic/sfo-api:latest
     networks:
       - speech-feature
     depends_on:
@@ -34,7 +34,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
       - POSTGRES_USER
-      - PROCESSING_QUEUE_NAME
+      - PROCESSING_QUEUE
       - SENDER_EMAIL
       - SMTP_SERVER
       - SMTP_HOST
@@ -42,6 +42,7 @@ services:
       - SMTP_LOGIN
       - SMTP_PASSWORD
       - STORAGE_DRIVER
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "debug", "-Q", "${PROCESSING_QUEUE}" ]
   redis:
     image: redis:latest
     networks:
