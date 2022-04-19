@@ -100,7 +100,7 @@ class Analyser:
 
 
 class LocalFileManager:
-    """ Local filesystem provider.
+    """Local filesystem provider.
     Handles temporary file storage and, if we're not using s3, result storage
     """
 
@@ -127,7 +127,7 @@ class LocalFileManager:
         return dirpath
 
     def register_result_dir(self):
-        """ return a valid path for a temporary directory and store for later cleanup """
+        """return a valid path for a temporary directory and store for later cleanup"""
         dirpath = path.join(self.temp_dir, uuid.uuid4().hex)
         self.result_dirs.append(dirpath)
         return dirpath
@@ -144,7 +144,7 @@ class LocalFileManager:
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
         for pth in [*self.result_dirs, *self.input_paths]:
-            dirpath = path.dirname(pth) if path.isfile(pth) else pth        
+            dirpath = path.dirname(pth) if path.isfile(pth) else pth
             with scandir(dirpath) as it:
                 for entry in it:
                     remove(path.join(dirpath, entry.name))
@@ -155,7 +155,7 @@ class LocalFileManager:
     def store(self):
         """Store results in the static directory and return url"""
         result_dir = path.join(self.results_dir, uuid.uuid4().hex)
-        mkdir(result_dir)   
+        mkdir(result_dir)
         zip_path = self.zip_tmp_files(result_dir)
         spl = zip_path.split("/")
         return f"{app_settings.STATIC_ASSET_URL}/{spl[3]}/{spl[4]}"
@@ -172,8 +172,8 @@ class LocalFileManager:
                 with scandir(dirpath) as it:
                     for entry in it:
                         # avoid infinite loop if zip is also stored in tmp dir
-                        if path.join(dirpath,entry.name) != zip_path:
-                            zipped.write(path.join(dirpath,entry.name), entry.name)
+                        if path.join(dirpath, entry.name) != zip_path:
+                            zipped.write(path.join(dirpath, entry.name), entry.name)
         return zip_path
 
 
@@ -187,7 +187,6 @@ class S3FileManager(LocalFileManager):
         self.bucket = app_settings.BUCKET_NAME
         """ store a list of keys that we can remove when we're done """
         self.removable_keys = []
-
 
     def load(self, _key):
         """Download file from s3 and store both key and local temp path for cleanup"""
@@ -218,7 +217,7 @@ class S3FileManager(LocalFileManager):
 
 
 class FileManager:
-    """ A facade that provides either the local or s3 filemanager depending on environment
+    """A facade that provides either the local or s3 filemanager depending on environment
     as well as a simplified interface exposing only methods needed by the worker
     """
 
@@ -230,27 +229,27 @@ class FileManager:
         )
 
     def load(self, path: str) -> str:
-        """ download file from s3 if necessary and return the local path """
+        """download file from s3 if necessary and return the local path"""
         return self.Manager.load(path)
 
     def register_result_dir(self) -> str:
-        """ return a valid path for a local directory that shennong can use to store results 
-            and store path for later cleanup
+        """return a valid path for a local directory that shennong can use to store results
+        and store path for later cleanup
         """
         return self.Manager.register_result_dir()
 
     def register_result_path(self, local_path: str, extension: str) -> str:
-        """ create a directory and return a valid filepath to store a file 
-            internally registers the tmp parent directory for removal
+        """create a directory and return a valid filepath to store a file
+        internally registers the tmp parent directory for removal
         """
         return self.Manager.register_result_path(local_path, extension)
 
     def remove_temps(self):
-        """ remove temporary files and directories """
+        """remove temporary files and directories"""
         return self.Manager.remove_temps()
 
     def store(self):
-        """ save the results to a local file and optionally push to s3 """
+        """save the results to a local file and optionally push to s3"""
         return self.Manager.store()
 
 
@@ -269,13 +268,12 @@ def process_data(
         local_path = storage_manager.load(file_path)
         analyser = Analyser(local_path, channel, collection)
 
-
         for k, v in settings.items():
             analyser.process(k, v)
         # note that csv serializers saves a directory with a csv and json file inside
         # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35
-        if(res_type == '.csv'):
-            serializer = 'csv'
+        if res_type == ".csv":
+            serializer = "csv"
             outpath = storage_manager.register_result_dir()
         else:
             # let shennong resolve the serializer

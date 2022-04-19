@@ -18,5 +18,4 @@ class Settings:
     UPLOAD_DIR: str = getenv("UPLOAD_DIR")
 
 
-
 settings = Settings()
