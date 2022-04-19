@@ -1,0 +1,6 @@
+[MASTER]
+disable=
+    C0114, # missing-module-docstring
+    D100, # missing public docstring
+    raise-missing-from
+good-names=db,_,id,f,ft,i

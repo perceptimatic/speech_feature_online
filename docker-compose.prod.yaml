@@ -1,0 +1,88 @@
+version: "3.6"
+services:
+  api:
+    image: ghcr.io/cklamann/sfo-api:latest
+    networks:
+      - speech-feature
+    depends_on:
+      - postgres
+    environment:
+      - API_HOST_PORT
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_DEFAULT_REGION
+      - JWT_SECRET
+      - FAST_API_DEFAULT_ADMIN_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - PROCESSING_QUEUE
+      - STORAGE_DRIVER=s3
+  worker:
+    image: ghcr.io/cklamann/sfo-worker:latest
+    networks:
+      - speech-feature
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_DEFAULT_REGION
+      - AWS_SECRET_ACCESS_KEY
+      - BUCKET_NAME
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - PROCESSING_QUEUE_NAME
+      - SENDER_EMAIL
+      - SMTP_SERVER
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_LOGIN
+      - SMTP_PASSWORD
+      - STORAGE_DRIVER
+  redis:
+    image: redis:latest
+    networks:
+      - speech-feature
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - worker
+    networks:
+      - speech-feature
+      # todo: https://flower.readthedocs.io/en/latest/reverse-proxy.html
+    command: celery flower --url_prefix=flower
+  postgres:
+    image: postgres:latest
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - POSTGRES_ROOT_PASSWORD
+    networks:
+      - speech-feature
+    user: ${UIDGID}
+  nginx:
+    image: nginx:1.20
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./react/dist:/usr/share/nginx/html
+    networks:
+      - speech-feature
+    depends_on:
+      - flower
+      - api
+      - worker
+    ports:
+      - 80:80
+      - 443:443
+networks:
+  speech-feature:
