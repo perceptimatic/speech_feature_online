@@ -29,6 +29,7 @@ services:
       - speech-feature
   worker:
     image: ghcr.io/perceptimatic/sfo-worker:latest
+    restart: always
     depends_on:
       - postgres
       - redis

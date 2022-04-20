@@ -18,8 +18,10 @@ services:
       - POSTGRES_USER
       - PROCESSING_QUEUE
       - STORAGE_DRIVER=s3
+    entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
   worker:
     image: ghcr.io/perceptimatic/sfo-worker:latest
+    restart: always
     networks:
       - speech-feature
     depends_on:
@@ -51,12 +53,13 @@ services:
     image: mher/flower
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_USERNAME
+      - FLOWER_PASSWORD
     depends_on:
       - worker
     networks:
       - speech-feature
-      # todo: https://flower.readthedocs.io/en/latest/reverse-proxy.html
-    command: celery flower --url_prefix=flower
+    command: celery flower --url_prefix=flower --basic_auth=${FLOWER_USERNAME}:${FLOWER_PASSWORD}
   postgres:
     image: postgres:latest
     volumes:
