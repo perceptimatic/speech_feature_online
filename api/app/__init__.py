@@ -7,7 +7,10 @@ from app.settings import settings
 # Initialize logger.
 
 file_handler = TimedRotatingFileHandler(
-    path.join(path.dirname(__file__), "logs", "errors.log"), when="D", interval=1
+    path.join(path.dirname(__file__), "logs", "errors.log"),
+    when="D",
+    backupCount=14,
+    interval=1,
 )
 file_handler.setLevel(logging.ERROR)
 
