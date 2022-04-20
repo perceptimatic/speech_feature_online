@@ -24,13 +24,14 @@ RUN  conda install python=3.7  && \
 RUN pip install celery[redis] pylint aiofiles black sqlalchemy psycopg2-binary boto3 pytest
 
 RUN mkdir -p ${UPLOAD_DIR} && \
-    chown -R 1000:1000 ${UPLOAD_DIR} && \
+    chown -R ${USER_UID}:${USER_GID} ${UPLOAD_DIR} && \
     mkdir -p /srv/results && \
-    chown -R 1000:1000 /srv/results
+    chown -R ${USER_UID}:${USER_GID} /srv/results
 
 COPY . .
 
-USER 1000
+RUN chown -R ${USER_UID}:${USER_GID} /code 
 
-RUN chown -R $USER:$USER /code 
+USER ${USER_UID}
+
 
