@@ -75,8 +75,13 @@ services:
     user: ${UIDGID}
   nginx:
     image: nginx:1.20
+    environment:
+      - PRIVKEY_PATH
+      - FULLCHAIN_PATH
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx:/etc/nginx
+      - ${FULLCHAIN_PATH}:/etc/nginx/ssl/certs/fullchain.pem:ro
+      - ${PRIVKEY_PATH}:/etc/nginx/ssl/certs/privkey.pem:ro
       - ./react/dist:/usr/share/nginx/html
     networks:
       - speech-feature

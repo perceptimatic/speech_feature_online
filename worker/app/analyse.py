@@ -210,6 +210,7 @@ class S3FileManager(LocalFileManager):
         zip_path = self.zip_tmp_files(tmp_dir)
         key = path.basename(zip_path)
         self.resource.meta.client.upload_file(zip_path, self.bucket, key)
+        # default expiration is an hour
         url = self.client.generate_presigned_url(
             "get_object", Params={"Bucket": self.bucket, "Key": key}
         )
