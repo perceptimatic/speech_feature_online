@@ -4,4 +4,5 @@ export { default as Header } from './Header';
 export { default as JobFormField } from './JobForm';
 export { default as LoadingOverlay } from './LoadingOverlay';
 export { default as SuccessModal } from './SuccessModal';
+export { default as UploadSuccessModal } from './UploadSuccessModal';
 export { default as ProgressLoadingOverlay } from './ProgressLoadingOverlay';

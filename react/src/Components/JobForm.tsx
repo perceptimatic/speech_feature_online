@@ -166,13 +166,7 @@ export default function JobFormField<K extends boolean | string | number>({
             );
         case 'radio':
             return (
-                <FormControl
-                    sx={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                    }}
-                    key={config.field}
-                >
+                <FormControl key={config.field}>
                     <FormLabel
                         sx={{
                             marginRight: 1,
@@ -471,7 +465,7 @@ export const globalFields: Record<
         component: 'radio',
         default: 1,
         field: 'channel',
-        label: 'Which channel to keep for stereo audio (1 or 2)?',
+        label: 'If recording is in stereo, which channel would you like to keep (1 or 2)?',
         options: [
             { label: '1', value: '1' },
             { label: '2', value: '2' },

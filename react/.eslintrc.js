@@ -21,6 +21,7 @@ module.exports = {
     rules: {
         'no-console': 'warn',
         'no-debugger': 'off',
+        'react/no-unescaped-entities': 'off',
         'react-hooks/rules-of-hooks': 'error',
         'react-hooks/exhaustive-deps': 'warn',
         '@typescript-eslint/no-non-null-assertion': 'off',

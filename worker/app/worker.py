@@ -20,7 +20,6 @@ def celery_test(word: str) -> str:
 
 @celery_app.task()
 def process_shennong_job(file_paths: List[str], data: Dict[str, Any]):
-    logger.debug(file_paths, data)
     """Run the shennong job."""
     email = data["email"]
     res_type = data["res"]

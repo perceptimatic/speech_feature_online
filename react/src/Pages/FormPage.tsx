@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
     Box,
     Button,
-    Divider,
     Grid,
     List,
     ListItem,
@@ -15,6 +14,8 @@ import {
     StepLabel,
     TextField,
     Typography,
+    Divider,
+    capitalize,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import {
@@ -38,6 +39,7 @@ import {
     JobFormField,
     ProgressLoadingOverlay,
     SuccessModal,
+    UploadSuccessModal,
 } from '../Components';
 import {
     AnalysisConfig,
@@ -47,19 +49,14 @@ import {
     PKaldiAnalysisConfigProps,
     StandardAnalysisConfigProps,
 } from '../types';
-interface SubmissionState {
-    state: 'PENDING' | 'ERROR' | 'SUCCESS';
-    message?: string;
-}
 
 const FormPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [failedFiles, setFailedFiles] = useState<File[]>([]);
     const [invalidFields, setInvalidFields] = useState<string[]>();
     const [progress, setProgress] = useState<ProgressIncrement>();
-    const [submissionState, setSubmissionState] = useState<SubmissionState>({
-        state: 'PENDING',
-    });
+    const [submissionSuccess, setSubmissionSuccess] = useState<boolean>();
+    const [uploadSuccess, setUploadSucess] = useState<boolean>();
     const [state, dispatch] = useFormReducer();
 
     useEffect(() => {
@@ -71,7 +68,6 @@ const FormPage: React.FC = () => {
             }
         });
 
-        /* todo: print these at the bottom, but also include in component itself */
         if (state.analyses) {
             getKeys(state.analyses).forEach(k => {
                 const analysis = analysisFields[k];
@@ -170,6 +166,7 @@ const FormPage: React.FC = () => {
     };
     const uploadFiles = async (files: File[]) => {
         let failures: File[] = failedFiles.slice();
+        /* todo: merge repeat failures */
         return postFiles(files, p => setProgress(p))
             .then(r => {
                 let success = true;
@@ -204,171 +201,333 @@ const FormPage: React.FC = () => {
 
     const submitJob = () => {
         submitForm(state);
-        setSubmissionState({ state: 'SUCCESS' });
+        setSubmissionSuccess(true);
     };
 
     return (
         <Grid container direction="column" alignItems="flex-start">
-            <Typography variant="h3">Run an analysis</Typography>
-            <Typography>
-                Use the controls below to upload an audio file to be processed
-                by the Shennong software. The results will be sent to the email
-                address you enter in the field below.
-            </Typography>
-            <Divider flexItem orientation="vertical" />
-            <Stepper orientation="vertical" activeStep={activeStep}>
-                <Step
-                    sx={{ cursor: 'pointer' }}
-                    active={activeStep === 0}
-                    completed={getEmailIsValid()}
-                >
-                    <StepLabel onClick={() => setActiveStep(0)}>
-                        Enter an email address to receive your results.
-                    </StepLabel>
-                    <StepContent>
-                        <TextField
-                            error={!getEmailIsValid()}
-                            label="Your email"
-                            helperText={
-                                getEmailIsValid()
-                                    ? 'Results will be sent to this address.'
-                                    : 'Please enter a valid email address.'
-                            }
-                            onChange={e =>
-                                update('email', e.currentTarget.value)
-                            }
-                            type="email"
-                            value={state['email']}
-                            onBlur={() =>
-                                getEmailIsValid()
-                                    ? setActiveStep(1)
-                                    : setActiveStep(0)
-                            }
-                        />
-                    </StepContent>
-                </Step>
-                <Step
-                    active={activeStep === 1}
-                    completed={!!state.files.length}
-                    sx={{ cursor: 'pointer' }}
-                >
-                    <StepLabel onClick={() => setActiveStep(1)}>
-                        Select Files
-                    </StepLabel>
+            <Grid item>
+                <Box>
+                    <Typography variant="h3">Run an analysis</Typography>
+                    <Typography>
+                        Use the controls below to upload an audio file to be
+                        processed by the Shennong software. The results will be
+                        sent to the email address you enter in the field below.
+                    </Typography>
+                </Box>
+            </Grid>
+            <Grid container item direction="row">
+                <Divider variant="middle" sx={{ margin: 3, width: '100%' }} />
+            </Grid>
+            <Grid item container direction="row">
+                <Grid item container md={4} direction="column">
+                    <Stepper orientation="vertical" activeStep={activeStep}>
+                        <Step
+                            sx={{ cursor: 'pointer' }}
+                            active={activeStep === 0}
+                            completed={getEmailIsValid()}
+                        >
+                            <StepLabel onClick={() => setActiveStep(0)}>
+                                Enter an email address.
+                            </StepLabel>
+                            <StepContent>
+                                <Typography variant="caption">
+                                    We'll send your results here.
+                                </Typography>
+                            </StepContent>
+                        </Step>
+                        <Step
+                            active={activeStep === 1}
+                            completed={!!state.files.length}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <StepLabel onClick={() => setActiveStep(1)}>
+                                Select Files
+                            </StepLabel>
+                            <StepContent>
+                                <Typography variant="caption">
+                                    Use the button to upload the audio files
+                                    you'd like processed.
+                                </Typography>
+                            </StepContent>
+                        </Step>
+                        <Step
+                            active={activeStep === 2}
+                            completed={getAtLeastOneFeatureSelected()}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <StepLabel onClick={() => setActiveStep(2)}>
+                                Select Processors
+                            </StepLabel>
+                            <StepContent>
+                                <Typography variant="caption">
+                                    Configure your job by selecting processors,
+                                    post-processors, and options.
+                                </Typography>
+                            </StepContent>
+                        </Step>
+                        <Step
+                            active={activeStep === 3}
+                            completed={!!submissionSuccess}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <StepLabel onClick={() => setActiveStep(3)}>
+                                Review and Submit
+                            </StepLabel>
+                            <StepContent>
+                                <Typography variant="caption">
+                                    Review your job and submit for processing.
+                                </Typography>
+                            </StepContent>
+                        </Step>
+                    </Stepper>
+                </Grid>
 
-                    <StepContent>
-                        <Button variant="contained" component="label">
-                            Select files
-                            <input
-                                accept=".mp3,.wav,.ogg,.flac"
-                                type="file"
-                                hidden
-                                multiple
-                                onChange={e => {
-                                    if (e.currentTarget.files) {
-                                        uploadFiles(
-                                            Array.from(e.currentTarget.files)
-                                        ).then(() => setActiveStep(2));
-                                    }
-                                }}
-                            />
-                        </Button>
-
-                        <UploadStatusBox
-                            failedUploads={failedFiles}
-                            removeFailedFile={file => {
-                                const newFailedFiles = failedFiles.filter(
-                                    f => f.name !== file.name
-                                );
-                                setFailedFiles(newFailedFiles);
-                            }}
-                            removeUploadedFile={(key: string) => {
-                                update(
-                                    'files',
-                                    state.files.filter(f => f !== key)
-                                );
-                                if (process.env.STORAGE_DRIVER === 's3') {
-                                    removeFileFromS3(key);
-                                }
-                            }}
-                            retryUploads={(files: File[]) => uploadFiles(files)}
-                            successfulUploads={state.files}
-                        />
-                    </StepContent>
-                </Step>
-                <Step
-                    active={activeStep === 2}
-                    completed={getAtLeastOneFeatureSelected()}
-                    sx={{ cursor: 'pointer' }}
+                <Grid
+                    md={8}
+                    item
+                    container
+                    alignItems="flex-start"
+                    direction="column"
                 >
-                    <StepLabel onClick={() => setActiveStep(2)}>
-                        Select Processors
-                    </StepLabel>
-                    <StepContent>
-                        {getEntries(globalFields).map(([key, config]) => (
-                            <JobFormField
-                                key={key}
-                                config={config}
-                                update={update.bind(null, key)}
-                                value={state[key]}
-                            />
-                        ))}
-                        <Typography variant="h6">
-                            Shennong Processors
-                        </Typography>
-                        {getEntries(analysisFields).map(([k, config]) => (
-                            <ProcessingGroup
-                                add={addAnalysis}
-                                config={config}
-                                key={k}
-                                state={state}
-                                update={updateAnalysis}
-                                remove={removeAnalysis}
-                            />
-                        ))}
-                        <Typography variant="h6">Results Options</Typography>
-                        <Typography>
-                            Your results will arrive in .zip format. The .zip
-                            archive will contain 1 data file per audio file
-                            submitted.
-                        </Typography>
-                    </StepContent>
-                    <Button
-                        disabled={
-                            !!invalidFields?.length ||
-                            !getAtLeastOneFeatureSelected() ||
-                            !!failedFiles.length ||
-                            !state.files.length
-                        }
-                        onClick={() => {
-                            submitJob();
-                            dispatch({ type: 'clear' });
-                        }}
-                        variant="contained"
-                    >
-                        Submit
-                    </Button>
-                    {!getAtLeastOneFeatureSelected() && (
-                        <Typography color="error">
-                            Please select at least one Shennong feature.
-                        </Typography>
-                    )}
-                    {!getEmailIsValid() && (
-                        <Typography color="error">
-                            Please enter a valid email address.
-                        </Typography>
-                    )}
-                </Step>
-            </Stepper>
-            {progress && <ProgressLoadingOverlay progress={progress} />}
-            <SuccessModal
-                handleClose={() => {
-                    setSubmissionState({ state: 'PENDING' });
-                }}
-                header="The job has been sent to the Shennong processing queue."
-                message={`When it has completed, an email will be sent to ${state.email} with a link to the results.`}
-                open={submissionState.state === 'SUCCESS'}
-            />
+                    <>
+                        {activeStep === 0 && (
+                            <Grid
+                                alignItems="center"
+                                container
+                                direction="row"
+                                item
+                                justifyContent="flex-start"
+                                spacing={2}
+                            >
+                                <Grid item>
+                                    <TextField
+                                        error={!getEmailIsValid()}
+                                        label="Your email"
+                                        helperText={
+                                            getEmailIsValid()
+                                                ? 'Results will be sent to this address.'
+                                                : 'Please enter a valid email address.'
+                                        }
+                                        onChange={e =>
+                                            update(
+                                                'email',
+                                                e.currentTarget.value
+                                            )
+                                        }
+                                        type="email"
+                                        value={state['email']}
+                                        onBlur={() =>
+                                            getEmailIsValid()
+                                                ? setActiveStep(1)
+                                                : setActiveStep(0)
+                                        }
+                                    />
+                                </Grid>
+                                <Grid item>
+                                    <Button
+                                        disabled={!getEmailIsValid()}
+                                        variant="contained"
+                                    >
+                                        Next
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        )}
+                        {activeStep == 1 && (
+                            <Grid
+                                alignItems="flex-start"
+                                container
+                                direction="column"
+                                item
+                                spacing={2}
+                            >
+                                <Grid item>
+                                    <Button
+                                        variant="contained"
+                                        component="label"
+                                    >
+                                        Add files
+                                        <input
+                                            accept=".mp3,.wav,.ogg,.flac"
+                                            type="file"
+                                            hidden
+                                            multiple
+                                            onChange={e => {
+                                                if (e.currentTarget.files) {
+                                                    uploadFiles(
+                                                        Array.from(
+                                                            e.currentTarget
+                                                                .files
+                                                        )
+                                                    ).then(a =>
+                                                        setUploadSucess(!!a)
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    </Button>
+                                </Grid>
+                                <Grid item>
+                                    <Divider />
+                                </Grid>
+                                <Grid item>
+                                    <UploadStatusBox
+                                        failedUploads={failedFiles}
+                                        removeFailedFile={file => {
+                                            const newFailedFiles =
+                                                failedFiles.filter(
+                                                    f => f.name !== file.name
+                                                );
+                                            setFailedFiles(newFailedFiles);
+                                        }}
+                                        removeUploadedFile={(key: string) => {
+                                            update(
+                                                'files',
+                                                state.files.filter(
+                                                    f => f !== key
+                                                )
+                                            );
+                                            if (
+                                                process.env.STORAGE_DRIVER ===
+                                                's3'
+                                            ) {
+                                                removeFileFromS3(key);
+                                            }
+                                        }}
+                                        retryUploads={(files: File[]) =>
+                                            uploadFiles(files)
+                                        }
+                                        successfulUploads={state.files}
+                                    />
+                                </Grid>
+                            </Grid>
+                        )}
+                        {activeStep === 2 && (
+                            <Box>
+                                {getEntries(globalFields).map(
+                                    ([key, config]) => (
+                                        <JobFormField
+                                            key={key}
+                                            config={config}
+                                            update={update.bind(null, key)}
+                                            value={state[key]}
+                                        />
+                                    )
+                                )}
+                                <Typography variant="h6">
+                                    Shennong Processors
+                                </Typography>
+                                {getEntries(analysisFields).map(
+                                    ([k, config]) => (
+                                        <ProcessingGroup
+                                            add={addAnalysis}
+                                            config={config}
+                                            key={k}
+                                            state={state}
+                                            update={updateAnalysis}
+                                            remove={removeAnalysis}
+                                        />
+                                    )
+                                )}
+                            </Box>
+                        )}
+                        {activeStep === 3 && (
+                            <Grid container item direction="column" spacing={2}>
+                                <Grid container item>
+                                    <Grid item>
+                                        <Typography variant="h4">
+                                            Summary
+                                        </Typography>
+                                    </Grid>
+                                    <Grid
+                                        container
+                                        alignItems="flex-start"
+                                        direction="column"
+                                        item
+                                    >
+                                        <SummaryItem
+                                            content={state.email}
+                                            label="Email"
+                                            missingOnClick={() =>
+                                                setActiveStep(0)
+                                            }
+                                        />
+                                        <SummaryItem
+                                            content={state.files.join(', ')}
+                                            label="Files"
+                                            missingOnClick={() =>
+                                                setActiveStep(1)
+                                            }
+                                        />
+                                        <SummaryItem
+                                            content={getKeys(state.analyses)
+                                                .map(capitalize)
+                                                .join(', ')}
+                                            label="Processors"
+                                            missingOnClick={() =>
+                                                setActiveStep(2)
+                                            }
+                                        />
+                                        <SummaryItem
+                                            content={state.res}
+                                            label="Output"
+                                            missingOnClick={() =>
+                                                setActiveStep(2)
+                                            }
+                                        />
+                                    </Grid>
+                                </Grid>
+                                <Grid item>
+                                    <Button
+                                        onClick={() => {
+                                            submitJob();
+                                            dispatch({ type: 'clear' });
+                                        }}
+                                        variant="contained"
+                                        disabled={
+                                            !!invalidFields?.length ||
+                                            !getAtLeastOneFeatureSelected() ||
+                                            !!failedFiles.length ||
+                                            !state.files.length
+                                        }
+                                    >
+                                        Submit
+                                    </Button>
+                                </Grid>
+                                <Grid item>
+                                    <Typography>
+                                        Your results will arrive in .zip format.
+                                        The .zip archive will contain 1 data
+                                        file per audio file submitted.
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        )}
+                    </>
+                </Grid>
+                {progress && <ProgressLoadingOverlay progress={progress} />}
+                <SuccessModal
+                    handleClose={() => {
+                        setSubmissionSuccess(undefined);
+                        setActiveStep(0);
+                    }}
+                    header="The job has been sent to the Shennong processing queue."
+                    message={`When it has completed, an email will be sent to ${state.email} with a link to the results.`}
+                    open={!!submissionSuccess}
+                />
+                <UploadSuccessModal
+                    handleClose={() => {
+                        setUploadSucess(undefined);
+                    }}
+                    onStay={() => setUploadSucess(undefined)}
+                    onDone={() => {
+                        setActiveStep(2);
+                        setUploadSucess(undefined);
+                    }}
+                    open={!!uploadSuccess}
+                />
+            </Grid>
         </Grid>
     );
 };
@@ -388,7 +547,7 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
     retryUploads,
     successfulUploads,
 }) => (
-    <Grid container spacing={2} direction="column">
+    <Grid container item spacing={2} direction="column">
         {successfulUploads.length ? (
             <Grid item>
                 <Box sx={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -442,7 +601,7 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                     ))}
                 </List>
                 <Button
-                    variant="outlined"
+                    variant="contained"
                     color="error"
                     onClick={() => retryUploads(failedUploads)}
                 >
@@ -450,6 +609,39 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                 </Button>
             </Grid>
         )}
+    </Grid>
+);
+
+interface SummaryItemProps {
+    content?: string;
+    label: string;
+    missingOnClick: () => void;
+}
+
+const SummaryItem: React.FC<SummaryItemProps> = ({
+    content,
+    label,
+    missingOnClick,
+}) => (
+    <Grid container direction="row" item>
+        <Grid xs={2} item>
+            <Typography>
+                <strong>{label}</strong>
+            </Typography>
+        </Grid>
+        <Grid xs={10} item>
+            {content ? (
+                <Typography>{content}</Typography>
+            ) : (
+                <Typography
+                    sx={{ cursor: 'pointer' }}
+                    onClick={missingOnClick}
+                    color="error"
+                >
+                    Incomplete! Click to enter a valid value.
+                </Typography>
+            )}
+        </Grid>
     </Grid>
 );
 
