@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AxiosError } from 'axios';
 import {
     Box,
     Button,
@@ -38,6 +39,7 @@ import {
 import {
     JobFormField,
     ProgressLoadingOverlay,
+    SubmissionErrorModal,
     SuccessModal,
     UploadSuccessModal,
 } from '../Components';
@@ -55,9 +57,10 @@ const FormPage: React.FC = () => {
     const [failedFiles, setFailedFiles] = useState<File[]>([]);
     const [invalidFields, setInvalidFields] = useState<string[]>();
     const [progress, setProgress] = useState<ProgressIncrement>();
-    const [submissionSuccess, setSubmissionSuccess] = useState<boolean>();
-    const [uploadSuccess, setUploadSucess] = useState<boolean>();
     const [state, dispatch] = useFormReducer();
+    const [submissionSuccess, setSubmissionSuccess] = useState<boolean>();
+    const [submissionError, setSubmissionError] = useState<AxiosError>();
+    const [uploadSuccess, setUploadSucess] = useState<boolean>();
 
     useEffect(() => {
         const invalid: string[] = [];
@@ -200,8 +203,11 @@ const FormPage: React.FC = () => {
         !!state['email'].match(/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/);
 
     const submitJob = () => {
-        submitForm(state);
-        setSubmissionSuccess(true);
+        submitForm(state)
+            .then(() => {
+                setSubmissionSuccess(true);
+            })
+            .catch((e: AxiosError) => setSubmissionError(e));
     };
 
     return (
@@ -482,7 +488,6 @@ const FormPage: React.FC = () => {
                                     <Button
                                         onClick={() => {
                                             submitJob();
-                                            dispatch({ type: 'clear' });
                                         }}
                                         variant="contained"
                                         disabled={
@@ -515,6 +520,13 @@ const FormPage: React.FC = () => {
                     header="The job has been sent to the Shennong processing queue."
                     message={`When it has completed, an email will be sent to ${state.email} with a link to the results.`}
                     open={!!submissionSuccess}
+                />
+
+                <SubmissionErrorModal
+                    code={submissionError?.response?.status}
+                    detail={submissionError?.response?.data.detail}
+                    open={!!submissionError}
+                    handleClose={() => setSubmissionError(undefined)}
                 />
                 <UploadSuccessModal
                     handleClose={() => {

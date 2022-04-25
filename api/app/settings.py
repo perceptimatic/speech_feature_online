@@ -5,6 +5,7 @@ class Settings:
     """App-wide settings"""
 
     APP_ENV: str = getenv("APP_ENV")
+    EMAIL_ALLOWLIST = getenv("EMAIL_ALLOWLIST")
     FAST_API_DEBUG: bool = getenv("FAST_API_DEBUG") == "true"
     FAST_API_DEFAULT_ADMIN_PASSWORD: str = getenv("FAST_API_DEFAULT_ADMIN_PASSWORD")
     JWT_ALGO: str = "HS256"

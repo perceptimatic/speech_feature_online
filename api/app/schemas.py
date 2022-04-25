@@ -1,5 +1,8 @@
 from typing import Dict, List, Optional, Union
-from pydantic import BaseModel, EmailStr
+
+from pydantic import BaseModel, EmailStr, validator
+
+from app.settings import settings
 
 
 class BaseAnalysisConfig(BaseModel):
@@ -22,7 +25,6 @@ class PCrepeAnalysisConfig(BaseAnalysisConfig):
     model_capacity: str
 
 
-# todo: we'll need our own validator eventually
 class JobIn(BaseModel):
     """Fields that must be included in POST request body to start a job"""
 
@@ -30,10 +32,20 @@ class JobIn(BaseModel):
         str, Union[PCrepeAnalysisConfig, PKaldiAnalysisConfig, StandardAnalysisConfig]
     ]
     channel: int
-    email: EmailStr
+    email: str
     files: List[str]
     # key should be the analysis name, e.g., 'spectrogram'
     res: str  # ['.npz', '.mat', '.pkl', '.h5f', '.ark', '']
+
+    @validator("email")
+    def email_valid(cls, v):
+        EmailStr.validate(v)
+        allowed = True
+        if settings.EMAIL_ALLOWLIST:
+            allowed = v.strip() in settings.EMAIL_ALLOWLIST.split(",")
+        if not allowed:
+            raise ValueError("Email not in allow list!")
+        return True
 
 
 class UserIn(BaseModel):

@@ -24,15 +24,15 @@ const UploadSuccessModal: React.FC<UploadSuccessModalProps> = ({
                 File Uploaded Successfully
             </Typography>
             <Typography sx={{ mt: 2 }}>
-                Click Next to select your processors, or click More to continue
-                uploading files
+                Click Done to select your processors, or select Continue to
+                upload more files.
             </Typography>
             <Grid container flexWrap="nowrap" direction="row">
                 <Grid item>
                     <Button onClick={onDone}>Done</Button>
                 </Grid>
                 <Grid>
-                    <Button onClick={onStay}>Continue Uploading</Button>
+                    <Button onClick={onStay}>Continue</Button>
                 </Grid>
             </Grid>
         </>
