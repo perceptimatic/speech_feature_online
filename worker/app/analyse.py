@@ -217,49 +217,14 @@ class S3FileManager(LocalFileManager):
         return url
 
 
-class FileManager:
-    """A facade that provides either the local or s3 filemanager depending on environment
-    as well as a simplified interface exposing only methods needed by the worker
-    """
-
-    def __init__(self):
-        self.Manager = (
-            S3FileManager()
-            if app_settings.STORAGE_DRIVER == "s3"
-            else LocalFileManager()
-        )
-
-    def load(self, path: str) -> str:
-        """download file from s3 if necessary and return the local path"""
-        return self.Manager.load(path)
-
-    def register_result_dir(self) -> str:
-        """return a valid path for a local directory that shennong can use to store results
-        and store path for later cleanup
-        """
-        return self.Manager.register_result_dir()
-
-    def register_result_path(self, local_path: str, extension: str) -> str:
-        """create a directory and return a valid filepath to store a file
-        internally registers the tmp parent directory for removal
-        """
-        return self.Manager.register_result_path(local_path, extension)
-
-    def remove_temps(self):
-        """remove temporary files and directories"""
-        return self.Manager.remove_temps()
-
-    def store(self):
-        """save the results to a local file and optionally push to s3"""
-        return self.Manager.store()
-
-
 def process_data(
     file_paths: str, settings: Dict[str, Dict], res_type: str, channel: int
 ) -> str:
     """Process each file passed for analysis"""
 
-    storage_manager = FileManager()
+    storage_manager = (
+        S3FileManager() if app_settings.STORAGE_DRIVER == "s3" else LocalFileManager()
+    )
 
     # todo: use context manager
 
