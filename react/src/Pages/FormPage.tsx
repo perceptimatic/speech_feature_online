@@ -95,6 +95,11 @@ const FormPage: React.FC = () => {
         setInvalidFields(invalid);
     }, [state]);
 
+    const resetForm = () =>
+        dispatch({
+            type: 'clear',
+        });
+
     const update = <K extends keyof JobConfig>(k: K, v: JobConfig[K]) =>
         dispatch({
             type: 'update',
@@ -171,7 +176,6 @@ const FormPage: React.FC = () => {
     };
     const uploadFiles = async (files: File[]) => {
         let failures: File[] = failedFiles.slice();
-        /* todo: merge repeat failures */
         return postFiles(files, p => setProgress(p))
             .then(r => {
                 let success = true;
@@ -213,8 +217,6 @@ const FormPage: React.FC = () => {
             })
             .catch((e: AxiosError) => setSubmissionError(e));
     };
-
-    /* todo: to customize color, we need our own icon */
 
     return (
         <Grid container direction="column" alignItems="flex-start">
@@ -555,6 +557,7 @@ const FormPage: React.FC = () => {
                 <SuccessModal
                     handleClose={() => {
                         setSubmissionSuccess(undefined);
+                        resetForm();
                         setActiveStep(0);
                     }}
                     header="The job has been sent to the Shennong processing queue."

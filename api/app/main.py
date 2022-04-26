@@ -5,7 +5,7 @@ from uuid import uuid4
 import aiofiles
 import boto3
 from celery import Celery
-from fastapi import Body, FastAPI, File, HTTPException, status, UploadFile
+from fastapi import FastAPI, File, HTTPException, status, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from pydantic.errors import PathNotExistsError

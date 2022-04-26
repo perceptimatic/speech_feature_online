@@ -40,12 +40,11 @@ class JobIn(BaseModel):
     @validator("email")
     def email_valid(cls, v):
         EmailStr.validate(v)
-        allowed = True
-        if settings.EMAIL_ALLOWLIST:
-            allowed = v.strip() in settings.EMAIL_ALLOWLIST.split(",")
-        if not allowed:
+        if settings.EMAIL_ALLOWLIST and v.strip() not in settings.EMAIL_ALLOWLIST.split(
+            ","
+        ):
             raise ValueError("Email not in allow list!")
-        return True
+        return v
 
 
 class UserIn(BaseModel):
