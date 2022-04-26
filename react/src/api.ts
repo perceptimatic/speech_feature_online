@@ -26,10 +26,10 @@ export class ProgressIncrement {
  * @class UploadError
  */
 export class UploadError {
-    error?: any;
+    error: any;
     file?: File;
     message: string;
-    constructor(message: string, file?: File, error?: any) {
+    constructor(message: string, error: any, file?: File) {
         this.error = error;
         this.file = file;
         this.message = message;
@@ -53,9 +53,8 @@ const getS3KeyBaseName = (path: string) => {
     return key;
 };
 
-export const isUploadError = (
-    arg: UploadError | UploadResponse
-): arg is UploadError => !!(arg as UploadError).error;
+export const isUploadError = (arg: UploadError | any): arg is UploadError =>
+    !!(arg as UploadError).error;
 
 const getTempCredentials = async () => {
     let accessKeyId = '',
@@ -70,7 +69,7 @@ const getTempCredentials = async () => {
         sessionToken = result.data.Credentials.SessionToken!;
         return { accessKeyId, secretAccessKey, sessionToken };
     } catch (e) {
-        return false;
+        return new UploadError('Error fetching Credentials!', e);
     }
 };
 
@@ -95,13 +94,13 @@ const postFilesToS3 = async (
     files: File[],
     progressCb: (progress: ProgressIncrement) => void
 ): Promise<(UploadResponse | UploadError)[]> => {
-    const credentials = await getTempCredentials();
+    const credentialResponse = await getTempCredentials();
 
-    if (!credentials) {
-        return [new UploadError('Failed to fetch credentials!')];
+    if (isUploadError(credentialResponse)) {
+        return [credentialResponse];
     }
 
-    const s3 = getS3(credentials);
+    const s3 = getS3(credentialResponse);
 
     return Promise.all(
         files.map(f => {
@@ -123,19 +122,19 @@ const postFilesToS3 = async (
                         originalFileName: f.name,
                     };
                 },
-                err => new UploadError('Upload failed!', f, err)
+                err => new UploadError('Upload failed!', err, f)
             );
         })
     );
 };
 
 export const removeFileFromS3 = async (key: string) => {
-    const credential = await getTempCredentials();
-    if (!credential) {
-        return;
+    const credentialResponse = await getTempCredentials();
+    if (isUploadError(credentialResponse)) {
+        return credentialResponse;
     }
 
-    const s3 = getS3(credential);
+    const s3 = getS3(credentialResponse);
 
     return s3
         .deleteObject({

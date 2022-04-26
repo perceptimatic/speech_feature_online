@@ -185,7 +185,9 @@ const FormPage: React.FC = () => {
                             return res.remoteFileName;
                         } else if (isUploadError(res)) {
                             success = false;
-                            failures.push(res.file!);
+                            if (res.file && !failures.includes(res.file!)) {
+                                failures.push(res.file!);
+                            }
                         }
                     })
                     .filter(Boolean);
