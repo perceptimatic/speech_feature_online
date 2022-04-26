@@ -398,10 +398,33 @@ export const configurationFields: Record<
         required: true,
     },
     model_capacity: {
-        component: 'text',
+        component: 'radio',
+        default: 'full',
         field: 'model_capacity',
         label: 'Model Capacity',
         required: true,
+        options: [
+            {
+                label: 'Full',
+                value: 'full',
+            },
+            {
+                label: 'Large',
+                value: 'large',
+            },
+            {
+                label: 'Medium',
+                value: 'medium',
+            },
+            {
+                label: 'Small',
+                value: 'small',
+            },
+            {
+                label: 'Tiny',
+                value: 'tiny',
+            },
+        ],
     },
     snip_edges: {
         component: 'checkbox',

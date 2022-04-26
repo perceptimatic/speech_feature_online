@@ -1,4 +1,5 @@
 import logging
+from multiprocessing.sharedctypes import Value
 from os import mkdir, path, remove, rmdir, scandir
 import tempfile
 from typing import Any, Dict
@@ -11,8 +12,8 @@ from shennong.processor.spectrogram import SpectrogramProcessor
 from shennong.processor.filterbank import FilterbankProcessor
 from shennong.processor.mfcc import MfccProcessor
 from shennong.processor.plp import PlpProcessor
-from shennong.processor import KaldiPitchPostProcessor
-from shennong.processor import CrepePitchProcessor
+from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
+from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
 from shennong.processor.energy import EnergyProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
@@ -34,7 +35,7 @@ def resolve_processor(processor_name: str, settings: Dict[str, Any]):
     if processor_name == "plp":
         return PlpProcessor(**settings)
     if processor_name == "p_kaldi":
-        return KaldiPitchPostProcessor(**settings)
+        return KaldiPitchProcessor(**settings)
     if processor_name == "p_crepe":
         return CrepePitchProcessor(**settings)
     if processor_name == "energy":
@@ -53,12 +54,22 @@ class CmvnWrapper:
 
 
 def resolve_postprocessor(processor_name: str, features=None):
+    postprocessor = None
     if processor_name == "delta":
-        return DeltaPostProcessor()
+        postprocessor = DeltaPostProcessor()
     if processor_name == "cmvn":
-        return CmvnWrapper(features.ndims)
+        postprocessor = CmvnWrapper(features.ndims)
     if processor_name == "vad":
-        return VadPostProcessor()
+        postprocessor = VadPostProcessor()
+    if processor_name == "kaldi":
+        postprocessor = KaldiPitchPostProcessor()
+    if processor_name == "crepe":
+        postprocessor = CrepePitchPostProcessor()
+
+    if not postprocessor:
+        raise ValueError(f"{processor_name} is not defined!")
+
+    return postprocessor
 
 
 class Analyser:
@@ -89,8 +100,14 @@ class Analyser:
         return postprocessor.process(self.collection[processor_type])
 
     def process(self, processor_type: str, settings: Dict[str, Any]):
-        postprocessors = settings.pop("postprocessors")
+        postprocessors = settings.pop("postprocessors") or []
         settings["sample_rate"] = self.sound.sample_rate
+        if processor_type == "p_kaldi":
+            postprocessors.append("kaldi")
+        if processor_type == "p_crepe":
+            settings = settings.copy()
+            settings.pop("sample_rate")
+            postprocessors.append("crepe")
         processor = resolve_processor(processor_type, settings)
         self.collection[processor_type] = processor.process(self.sound)
         if postprocessors:
@@ -212,7 +229,8 @@ class S3FileManager(LocalFileManager):
         self.resource.meta.client.upload_file(zip_path, self.bucket, key)
         # default expiration is an hour
         url = self.client.generate_presigned_url(
-            "get_object", Params={"Bucket": self.bucket, "Key": key}
+            "get_object",
+            Params={"Bucket": self.bucket, "Key": key, "ExpiresIn": 60 * 60 * 168},
         )
         return url
 
