@@ -9,7 +9,6 @@ class Settings:
     PROCESSING_QUEUE: str = getenv("PROCESSING_QUEUE")
     STORAGE_DRIVER: str = getenv("STORAGE_DRIVER")
     SENDER_EMAIL: str = getenv("SENDER_EMAIL")
-    SMTP_SERVER: str = getenv("SMTP_SERVER")
     SMTP_HOST: str = getenv("SMTP_HOST")
     SMTP_PORT: str = getenv("SMTP_PORT")
     SMTP_LOGIN: str = getenv("SMTP_LOGIN")

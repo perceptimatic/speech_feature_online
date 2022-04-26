@@ -49,7 +49,6 @@ services:
       - POSTGRES_USER
       - PROCESSING_QUEUE
       - SENDER_EMAIL
-      - SMTP_SERVER
       - SMTP_HOST
       - SMTP_PORT
       - SMTP_LOGIN

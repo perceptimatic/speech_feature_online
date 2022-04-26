@@ -4,8 +4,6 @@ services:
     image: ghcr.io/perceptimatic/sfo-api:latest
     networks:
       - speech-feature
-    depends_on:
-      - postgres
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
@@ -25,9 +23,6 @@ services:
     restart: always
     networks:
       - speech-feature
-    depends_on:
-      - postgres
-      - redis
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_DEFAULT_REGION
@@ -39,7 +34,6 @@ services:
       - POSTGRES_USER
       - PROCESSING_QUEUE
       - SENDER_EMAIL
-      - SMTP_SERVER
       - SMTP_HOST
       - SMTP_PORT
       - SMTP_LOGIN

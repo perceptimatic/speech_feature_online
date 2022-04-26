@@ -21,6 +21,12 @@ class LocalEmailProvider:
         """send the email"""
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
             server.login(settings.SMTP_LOGIN, settings.SMTP_PASSWORD)
+            try:
+                server.starttls()
+            except Exception as e:
+                # for now
+                pass
+
             server.sendmail(
                 settings.SENDER_EMAIL, self.recipient, self.message.as_string()
             )
