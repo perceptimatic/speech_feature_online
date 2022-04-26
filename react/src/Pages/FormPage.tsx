@@ -17,6 +17,8 @@ import {
     Typography,
     Divider,
     capitalize,
+    styled,
+    Fade,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import {
@@ -210,6 +212,8 @@ const FormPage: React.FC = () => {
             .catch((e: AxiosError) => setSubmissionError(e));
     };
 
+    /* todo: to customize color, we need our own icon */
+
     return (
         <Grid container direction="column" alignItems="flex-start">
             <Grid item>
@@ -233,9 +237,9 @@ const FormPage: React.FC = () => {
                             active={activeStep === 0}
                             completed={getEmailIsValid()}
                         >
-                            <StepLabel onClick={() => setActiveStep(0)}>
+                            <StyledStepLabel onClick={() => setActiveStep(0)}>
                                 Enter an email address.
-                            </StepLabel>
+                            </StyledStepLabel>
                             <StepContent>
                                 <Typography variant="caption">
                                     We'll send your results here.
@@ -247,9 +251,9 @@ const FormPage: React.FC = () => {
                             completed={!!state.files.length}
                             sx={{ cursor: 'pointer' }}
                         >
-                            <StepLabel onClick={() => setActiveStep(1)}>
+                            <StyledStepLabel onClick={() => setActiveStep(1)}>
                                 Select Files
-                            </StepLabel>
+                            </StyledStepLabel>
                             <StepContent>
                                 <Typography variant="caption">
                                     Use the button to upload the audio files
@@ -262,9 +266,9 @@ const FormPage: React.FC = () => {
                             completed={getAtLeastOneFeatureSelected()}
                             sx={{ cursor: 'pointer' }}
                         >
-                            <StepLabel onClick={() => setActiveStep(2)}>
+                            <StyledStepLabel onClick={() => setActiveStep(2)}>
                                 Select Processors
-                            </StepLabel>
+                            </StyledStepLabel>
                             <StepContent>
                                 <Typography variant="caption">
                                     Configure your job by selecting processors,
@@ -277,9 +281,9 @@ const FormPage: React.FC = () => {
                             completed={!!submissionSuccess}
                             sx={{ cursor: 'pointer' }}
                         >
-                            <StepLabel onClick={() => setActiveStep(3)}>
+                            <StyledStepLabel onClick={() => setActiveStep(3)}>
                                 Review and Submit
-                            </StepLabel>
+                            </StyledStepLabel>
                             <StepContent>
                                 <Typography variant="caption">
                                     Review your job and submit for processing.
@@ -297,7 +301,7 @@ const FormPage: React.FC = () => {
                     direction="column"
                 >
                     <>
-                        {activeStep === 0 && (
+                        <FadeInStep active={activeStep === 0}>
                             <Grid
                                 alignItems="center"
                                 container
@@ -339,8 +343,8 @@ const FormPage: React.FC = () => {
                                     </Button>
                                 </Grid>
                             </Grid>
-                        )}
-                        {activeStep == 1 && (
+                        </FadeInStep>
+                        <FadeInStep active={activeStep === 1}>
                             <Grid
                                 alignItems="flex-start"
                                 container
@@ -408,37 +412,71 @@ const FormPage: React.FC = () => {
                                     />
                                 </Grid>
                             </Grid>
-                        )}
-                        {activeStep === 2 && (
-                            <Box>
-                                {getEntries(globalFields).map(
-                                    ([key, config]) => (
-                                        <JobFormField
-                                            key={key}
-                                            config={config}
-                                            update={update.bind(null, key)}
-                                            value={state[key]}
-                                        />
-                                    )
-                                )}
-                                <Typography variant="h6">
-                                    Shennong Processors
-                                </Typography>
-                                {getEntries(analysisFields).map(
-                                    ([k, config]) => (
-                                        <ProcessingGroup
-                                            add={addAnalysis}
-                                            config={config}
-                                            key={k}
-                                            state={state}
-                                            update={updateAnalysis}
-                                            remove={removeAnalysis}
-                                        />
-                                    )
-                                )}
-                            </Box>
-                        )}
-                        {activeStep === 3 && (
+                        </FadeInStep>
+                        <FadeInStep active={activeStep === 2}>
+                            <Grid
+                                item
+                                container
+                                flexWrap="nowrap"
+                                direction="column"
+                            >
+                                <Grid item container>
+                                    {getEntries(globalFields).map(
+                                        ([key, config]) => (
+                                            <Grid item key={key}>
+                                                <JobFormField
+                                                    config={config}
+                                                    update={update.bind(
+                                                        null,
+                                                        key
+                                                    )}
+                                                    value={state[key]}
+                                                />
+                                            </Grid>
+                                        )
+                                    )}
+                                </Grid>
+                                <Grid item>
+                                    <Typography variant="h6">
+                                        Shennong Processors
+                                    </Typography>
+                                </Grid>
+                                <Grid
+                                    alignItems="center"
+                                    container
+                                    direction="row"
+                                    item
+                                    flexWrap="nowrap"
+                                >
+                                    <Grid item container direction="column">
+                                        {getEntries(analysisFields).map(
+                                            ([k, config]) => (
+                                                <ProcessingGroup
+                                                    add={addAnalysis}
+                                                    config={config}
+                                                    key={k}
+                                                    state={state}
+                                                    update={updateAnalysis}
+                                                    remove={removeAnalysis}
+                                                />
+                                            )
+                                        )}
+                                    </Grid>
+                                    <Grid item>
+                                        <Button
+                                            disabled={
+                                                !getAtLeastOneFeatureSelected()
+                                            }
+                                            onClick={() => setActiveStep(3)}
+                                            variant="contained"
+                                        >
+                                            Done
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </FadeInStep>
+                        <FadeInStep active={activeStep === 3}>
                             <Grid container item direction="column" spacing={2}>
                                 <Grid container item>
                                     <Grid item>
@@ -508,7 +546,7 @@ const FormPage: React.FC = () => {
                                     </Typography>
                                 </Grid>
                             </Grid>
-                        )}
+                        </FadeInStep>
                     </>
                 </Grid>
                 {progress && <ProgressLoadingOverlay progress={progress} />}
@@ -650,7 +688,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     onClick={missingOnClick}
                     color="error"
                 >
-                    Incomplete! Click to enter a valid value.
+                    Incomplete! Click to return.
                 </Typography>
             )}
         </Grid>
@@ -658,3 +696,22 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
 );
 
 export default FormPage;
+
+const StyledStepLabel = styled(StepLabel)(({ theme }) => ({
+    '.MuiStepIcon-root.Mui-active': {
+        color: theme.palette.secondary.light,
+    },
+    '.MuiStepIcon-root.Mui-completed': {
+        color: theme.palette.secondary.dark,
+    },
+}));
+
+const FadeInStep: React.FC<{ active: boolean }> = ({ active, children }) => {
+    return active ? (
+        <Fade in={true} timeout={500}>
+            <span>{children}</span>
+        </Fade>
+    ) : (
+        <span />
+    );
+};

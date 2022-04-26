@@ -40,7 +40,11 @@ module.exports = {
         path: path.resolve(__dirname, 'dist'),
     },
     plugins: [
-        new HtmlWebpackPlugin({ template: './index.ejs', publicPath: '/' }),
+        new HtmlWebpackPlugin({
+            template: './index.ejs',
+            publicPath: '/',
+            favicon: './public/favicon.ico',
+        }),
         new webpack.DefinePlugin({
             'process.env.AWS_DEFAULT_REGION': JSON.stringify(
                 process.env.AWS_DEFAULT_REGION

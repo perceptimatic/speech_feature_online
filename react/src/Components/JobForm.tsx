@@ -234,7 +234,7 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
     const updateField = update(inputConfig.field);
 
     return (
-        <Grid container direction="column" spacing={2}>
+        <Grid container item direction="column" spacing={2}>
             <Grid item>
                 <JobFormField
                     config={inputConfig}

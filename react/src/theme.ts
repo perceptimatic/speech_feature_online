@@ -2,19 +2,6 @@ import { createTheme } from '@mui/material';
 
 const getTheme = (darkMode?: boolean) =>
     createTheme({
-        components: {
-            MuiFormLabel: {
-                styleOverrides: {
-                    root: {
-                        color: 'green',
-                        fontSize: '30px',
-                    },
-                    colorSecondary: {
-                        color: 'orange',
-                    },
-                },
-            },
-        },
         palette: {
             mode: darkMode ? 'dark' : 'light',
             primary: {

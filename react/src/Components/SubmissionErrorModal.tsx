@@ -19,7 +19,6 @@ const resolveMessage = (code?: number) => {
     switch (code) {
         case 422:
             return 'Validation Error!';
-
         default:
             return '';
     }

@@ -43,7 +43,10 @@ module.exports = {
         port: process.env.REACT_PORT,
     },
     plugins: [
-        new HtmlWebpackPlugin({ template: './index.ejs' }),
+        new HtmlWebpackPlugin({
+            template: './index.ejs',
+            favicon: './public/favicon.ico',
+        }),
         new webpack.DefinePlugin({
             'process.env.AWS_DEFAULT_REGION': JSON.stringify(
                 process.env.AWS_DEFAULT_REGION
