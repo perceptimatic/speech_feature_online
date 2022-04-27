@@ -1,5 +1,4 @@
 import logging
-from multiprocessing.sharedctypes import Value
 from os import mkdir, path, remove, rmdir, scandir
 import tempfile
 from typing import Any, Dict
@@ -230,7 +229,8 @@ class S3FileManager(LocalFileManager):
         # default expiration is an hour
         url = self.client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": self.bucket, "Key": key, "ExpiresIn": 60 * 60 * 168},
+            Params={"Bucket": self.bucket, "Key": key},
+            ExpiresIn=60 * 60 * 168,
         )
         return url
 
