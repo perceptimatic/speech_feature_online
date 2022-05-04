@@ -1,3 +1,4 @@
+from contextlib import AbstractContextManager
 import logging
 from os import mkdir, path, remove, rmdir, scandir
 import tempfile
@@ -115,19 +116,22 @@ class Analyser:
                 self.collection[key] = self.postprocess(pp, processor_type)
 
 
-class LocalFileManager:
+class LocalFileManager(AbstractContextManager):
     """Local filesystem provider.
-    Handles temporary file storage and, if we're not using s3, result storage
+    Handles temporary file storage and, if we're not using s3, result storage.
     """
 
     def __init__(self):
         """Where to save results when storing analyses on the container's filesystem (typically dev env)"""
         self.results_dir = "/srv/results"
         """ Storage location of intermediate files """
-        self.temp_dir = tempfile.gettempdir()
+        self.tmp_dir = tempfile.gettempdir()
         """ We keep track of these dirs so we can remove them once the analysis has finished """
         self.result_dirs = []
         self.input_paths = []
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.remove_temps()
 
     def load(self, filepath: str):
         """Check existence, then queue for removal"""
@@ -138,13 +142,13 @@ class LocalFileManager:
 
     def make_tmp_dir(self):
         """Create a temporary directory on the local filesystem"""
-        dirpath = path.join(self.temp_dir, uuid.uuid4().hex)
+        dirpath = path.join(self.tmp_dir, uuid.uuid4().hex)
         mkdir(dirpath)
         return dirpath
 
     def register_result_dir(self):
         """return a valid path for a temporary directory and store for later cleanup"""
-        dirpath = path.join(self.temp_dir, uuid.uuid4().hex)
+        dirpath = path.join(self.tmp_dir, uuid.uuid4().hex)
         self.result_dirs.append(dirpath)
         return dirpath
 
@@ -163,7 +167,13 @@ class LocalFileManager:
             dirpath = path.dirname(pth) if path.isfile(pth) else pth
             with scandir(dirpath) as it:
                 for entry in it:
-                    remove(path.join(dirpath, entry.name))
+                    try:
+                        """can run into errors if path doesn't contain file yet"""
+                        remove(path.join(dirpath, entry.name))
+                    except Exception as e:
+                        logger.error(
+                            f"Caught exception {e} while trying to remove result path"
+                        )
             rmdir(dirpath)
 
         return True
@@ -244,30 +254,29 @@ def process_data(
         S3FileManager() if app_settings.STORAGE_DRIVER == "s3" else LocalFileManager()
     )
 
-    # todo: use context manager
+    with storage_manager as manager:
+        # shennong the devil outta them:
+        for file_path in file_paths:
+            collection = FeaturesCollection()
+            local_path = manager.load(file_path)
+            analyser = Analyser(local_path, channel, collection)
 
-    # shennong the devil outta them:
-    for file_path in file_paths:
-        collection = FeaturesCollection()
-        local_path = storage_manager.load(file_path)
-        analyser = Analyser(local_path, channel, collection)
+            for k, v in settings.items():
+                analyser.process(k, v)
+            """ Note that csv serializers save a csv and a json file,
+                so they must be passed a directory path rather than a file path
+                https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
+            """
+            if res_type == ".csv":
+                serializer = "csv"
+                outpath = manager.register_result_dir()
+            else:
+                # if not a csv, let shennong resolve the serializer
+                serializer = None
+                outpath = manager.register_result_path(local_path, res_type)
+            analyser.collection.save(outpath, serializer=serializer)
 
-        for k, v in settings.items():
-            analyser.process(k, v)
-        # note that csv serializers saves a directory with a csv and json file inside
-        # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35
-        if res_type == ".csv":
-            serializer = "csv"
-            outpath = storage_manager.register_result_dir()
-        else:
-            # let shennong resolve the serializer
-            serializer = None
-            outpath = storage_manager.register_result_path(local_path, res_type)
-        analyser.collection.save(outpath, serializer=serializer)
-
-    # storeManager has kept track of temp result paths
-    url = storage_manager.store()
-    # with url successfully created, remove the intermediate files
-    storage_manager.remove_temps()
+        # storeManager has kept track of temp result paths
+        url = manager.store()
 
     return url
