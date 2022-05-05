@@ -7,24 +7,18 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 aiofiles = "^0.8.0"
-alembic = "^1.7.6"
-boto3 = "^1.21.22"
 celery = {extras = ["redis"], version = "^5.2.3"}
-fastapi = "^0.74.1"
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 psycopg2-binary = "^2.9.3"
 pydantic = {extras = ["email"], version = "^1.9.0"}
-python = "^3.9"
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-python-multipart = "^0.0.5"
+python = "^3.7"
 SQLAlchemy = "^1.4.31"
-uvicorn = "^0.17.5"
+boto3 = "^1.21.22"
+Jinja2 = "^3.1.2"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 debugpy = "^1.5.1"
 pytest = "^7.0.1"
-pytest-asyncio = "^0.18.1"
 pylint = "^2.12.2"
 
 [build-system]

@@ -1,1 +1,42 @@
-<!-- test -->
+<style type="text/css">
+  @font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    src: local(""),
+      url("../fonts/open-sans-v28-latin-regular.woff2") format("woff2");
+  }
+  .body {
+    width: 90%;
+    margin: auto;
+    font-family: "Open Sans", "Helvetica", sans-serif;
+    font-size: 14pt;
+    color: ;
+  }
+  a:link {
+    color: #075d72;
+    text-decoration: underline;
+  }
+  a:visited {
+    color: #542a95;
+    text-decoration: none;
+  }
+  a:hover {
+    color: #b40057;
+    background-color: #c4fff9;
+    text-decoration: underline;
+  }
+</style>
+
+<div class="body">
+  <p>Your Speech Features Online job has run successfully!</p>
+  <p>
+    Please click
+    <a target="_blank" href="{{ download_link }}" download
+      >Click to download your results.</a
+    >
+    to download your results. Note that the link will expire in 7 days and the
+    files removed from the server.
+  </p>
+  <!-- stg indicating the size -->
+  <p>If you have questions, please email the SFO team at {{ from_email }}</p>
+</div>

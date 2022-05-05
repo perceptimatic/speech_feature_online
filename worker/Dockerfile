@@ -21,14 +21,21 @@ RUN  conda install python=3.7  && \
     conda update -n base -c defaults conda && \
     conda install -c coml -c conda-forge shennong
 
-RUN pip install celery[redis] pylint aiofiles black sqlalchemy psycopg2-binary boto3 pytest
+# Install Poetry
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
+    cd /usr/local/bin && \
+    chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \
+    ln -s /opt/poetry/bin/poetry && \
+    poetry config virtualenvs.create false
+
+COPY . .
+
+RUN poetry install --no-root
 
 RUN mkdir -p ${UPLOAD_DIR} && \
     chown -R ${USER_UID}:${USER_GID} ${UPLOAD_DIR} && \
     mkdir -p /srv/results && \
     chown -R ${USER_UID}:${USER_GID} /srv/results
-
-COPY . .
 
 RUN chown -R ${USER_UID}:${USER_GID} /code 
 

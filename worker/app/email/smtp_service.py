@@ -1,3 +1,4 @@
+import logging
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -5,7 +6,10 @@ from email.mime.multipart import MIMEMultipart
 from app.settings import settings
 
 
-class LocalEmailProvider:
+logger = logging.getLogger(__name__)
+
+
+class SMTPService:
     """Local provider for testing environments"""
 
     def __init__(self, subject: str, recipient: str, body: str):
@@ -20,11 +24,7 @@ class LocalEmailProvider:
     def send(self):
         """send the email"""
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            try:
-                server.starttls()
-            except Exception as e:
-                # for now
-                pass
+            server.starttls()
 
             server.login(settings.SMTP_LOGIN, settings.SMTP_PASSWORD)
 

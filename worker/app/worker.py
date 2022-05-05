@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 
 from app.analyse import process_data
 from app.celery_app import celery_app
-from app.email.test_provider import LocalEmailProvider
+from app.email.smtp_service import SMTPService
 
 
 @celery_app.task()
@@ -17,6 +17,6 @@ def process_shennong_job(file_paths: List[str], data: Dict[str, Any]):
     link = (
         f"<a target='_blank' href='{url}' download>Click to download your results.</a>"
     )
-    mailer = LocalEmailProvider("Your SFO Results", email, link)
+    mailer = SMTPService("Your SFO Results", email, link)
     mailer.send()
     return url
