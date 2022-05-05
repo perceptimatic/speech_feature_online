@@ -246,13 +246,7 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                     }
                 />
             </Grid>
-            <Grid
-                container
-                direction="column"
-                item
-                spacing={2}
-                sx={{ marginLeft: 2 }}
-            >
+            <Grid container direction="column" item spacing={2}>
                 {groupValues &&
                     configFields.map(f => (
                         <Grid item key={f}>

@@ -8,7 +8,6 @@ import getTheme from '../theme';
 import { Header, Footer } from '../Components';
 import { FormPage } from '.';
 
-/* some comment */
 const Main: React.FC = () => {
     const [darkMode] = useState(!!window.localStorage.getItem('darkMode'));
 

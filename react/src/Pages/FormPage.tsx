@@ -466,12 +466,21 @@ const FormPage: React.FC = () => {
                                             )
                                         )}
                                     </Grid>
-                                    <Grid item>
+                                    <Grid
+                                        alignItems="flex-start"
+                                        container
+                                        direction="column"
+                                        item
+                                    >
                                         <Button
                                             disabled={
                                                 !getAtLeastOneFeatureSelected()
                                             }
                                             onClick={() => setActiveStep(3)}
+                                            sx={{
+                                                bottom: '25vh',
+                                                position: 'fixed',
+                                            }}
                                             variant="contained"
                                         >
                                             Done
