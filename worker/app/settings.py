@@ -14,6 +14,7 @@ class Settings:
     SMTP_LOGIN: str = getenv("SMTP_LOGIN")
     SMTP_PASSWORD: str = getenv("SMTP_PASSWORD")
     STATIC_ASSET_URL: str = getenv("STATIC_ASSET_URL")
+    WORKER_DEBUG: bool = getenv("WORKER_DEBUG") == "true"
     UPLOAD_DIR: str = getenv("UPLOAD_DIR")
 
 
