@@ -7,13 +7,13 @@ from celery import Celery
 
 from app.settings import settings
 
-celery_app = Celery("speech_features", broker="redis://redis:6379/0")
+celery_app = Celery("speech_features")
+
+celery_app.config_from_object("app.celeryconfig")
 
 celery_app.conf.task_routes = {
     "app.worker.process_shennong_job": {"queue": settings.PROCESSING_QUEUE},
 }
-
-celery_app.conf.result_backend = f"db+{settings.POSTGRES_CONNECTION_STRING}"
 
 
 @celery.signals.after_setup_logger.connect
