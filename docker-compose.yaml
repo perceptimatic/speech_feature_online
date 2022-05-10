@@ -57,6 +57,7 @@ services:
       - STATIC_ASSET_URL
       - STORAGE_DRIVER
       - UPLOAD_DIR
+      - WORKER_CONCURRENCY
       - WORKER_DEBUG
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "warning", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:

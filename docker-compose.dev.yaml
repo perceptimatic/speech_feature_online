@@ -39,6 +39,7 @@ services:
       - SMTP_LOGIN
       - SMTP_PASSWORD
       - STORAGE_DRIVER
+      - WORKER_CONCURRENCY
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "warning", "-Q", "${PROCESSING_QUEUE}" ]
   redis:
     image: redis:latest
