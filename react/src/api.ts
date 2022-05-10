@@ -118,7 +118,7 @@ const postFilesToS3 = async (
             return ret.promise().then(
                 d => {
                     return {
-                        remoteFileName: `${d.Bucket!}/${d.Key}`,
+                        remoteFileName: d.Key,
                         originalFileName: f.name,
                     };
                 },

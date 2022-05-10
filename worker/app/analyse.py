@@ -214,10 +214,10 @@ class S3FileManager(LocalFileManager):
         """ store a list of keys that we can remove when we're done """
         self.removable_keys = []
 
-    def load(self, _key):
+    def load(self, key):
         """Download file from s3 and store both key and local temp path for cleanup"""
-        key = path.basename(_key)
-        save_path = path.join(self.make_tmp_dir(), key)
+        basename = path.basename(key)
+        save_path = path.join(self.make_tmp_dir(), basename)
         self.input_paths.append(save_path)
         self.resource.Bucket(self.bucket).download_file(key, save_path)
         self.removable_keys.append(key)
@@ -227,7 +227,11 @@ class S3FileManager(LocalFileManager):
         """Wipe out local temp files and remote upload files"""
         super().remove_temps()
         for removable_key in self.removable_keys:
-            self.client.delete_object(Bucket=self.bucket, Key=removable_key)
+            """For now we'll keep our test files so we can perform multiple tasks with them without needing
+            to reupload every time.
+            """
+            if not removable_key.startswith("tests/"):
+                self.client.delete_object(Bucket=self.bucket, Key=removable_key)
 
     def store(self):
         """Zip up results, upload to bucket, and queue local zip file for removal"""
