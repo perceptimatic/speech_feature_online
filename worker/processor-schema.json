@@ -1,0 +1,1155 @@
+{
+    "title": "Shennong processor and postprocessor classes",
+    "description": "This schema is intended as a blueprint for **generating** forms, validators, and instances. It should not be used to validate a document.",
+    "processors": [
+        {
+            "class_key": "bottleneck",
+            "class_name": "BottleneckProcessor",
+            "init_args": [
+                {
+                    "name": "weights",
+                    "type": "string",
+                    "default": "BabelMulti",
+                    "required": true,
+                    "options": []
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 0.1,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "crepe",
+            "class_name": "CrepePitchProcessor",
+            "init_args": [
+                {
+                    "name": "model_capacity",
+                    "type": "string",
+                    "default": "full",
+                    "required": true,
+                    "options": [
+                        "full",
+                        "large",
+                        "medium",
+                        "small",
+                        "tiny"
+                    ]
+                },
+                {
+                    "name": "viterbi",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "center",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "audio",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "energy",
+            "class_name": "EnergyProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "preemph_coeff",
+                    "type": "number",
+                    "default": 0.97,
+                    "required": true
+                },
+                {
+                    "name": "remove_dc_offset",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "window_type",
+                    "type": "string",
+                    "default": "povey",
+                    "required": true,
+                    "options": [
+                        "hamming",
+                        "hanning",
+                        "povey",
+                        "rectangular",
+                        "blackman"
+                    ]
+                },
+                {
+                    "name": "round_to_power_of_two",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "blackman_coeff",
+                    "type": "number",
+                    "default": 0.42,
+                    "required": true
+                },
+                {
+                    "name": "snip_edges",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "raw_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "compression",
+                    "type": "string",
+                    "default": "log",
+                    "required": true,
+                    "options": []
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "filterbank",
+            "class_name": "FilterbankProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "preemph_coeff",
+                    "type": "number",
+                    "default": 0.97,
+                    "required": true
+                },
+                {
+                    "name": "remove_dc_offset",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "window_type",
+                    "type": "string",
+                    "default": "povey",
+                    "required": true,
+                    "options": [
+                        "hamming",
+                        "hanning",
+                        "povey",
+                        "rectangular",
+                        "blackman"
+                    ]
+                },
+                {
+                    "name": "round_to_power_of_two",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "blackman_coeff",
+                    "type": "number",
+                    "default": 0.42,
+                    "required": true
+                },
+                {
+                    "name": "snip_edges",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "num_bins",
+                    "type": "integer",
+                    "default": 23,
+                    "required": true
+                },
+                {
+                    "name": "low_freq",
+                    "type": "integer",
+                    "default": 20,
+                    "required": true
+                },
+                {
+                    "name": "high_freq",
+                    "type": null,
+                    "default": 0,
+                    "required": true
+                },
+                {
+                    "name": "vtln_low",
+                    "type": "integer",
+                    "default": 100,
+                    "required": true
+                },
+                {
+                    "name": "vtln_high",
+                    "type": "integer",
+                    "default": -500,
+                    "required": true
+                },
+                {
+                    "name": "use_energy",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                },
+                {
+                    "name": "energy_floor",
+                    "type": null,
+                    "default": 0.0,
+                    "required": true
+                },
+                {
+                    "name": "raw_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "htk_compat",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                },
+                {
+                    "name": "use_log_fbank",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "use_power",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "vtln_warp",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "kaldi_pitch",
+            "class_name": "KaldiPitchProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "min_f0",
+                    "type": "integer",
+                    "default": 50,
+                    "required": true
+                },
+                {
+                    "name": "max_f0",
+                    "type": "integer",
+                    "default": 400,
+                    "required": true
+                },
+                {
+                    "name": "soft_min_f0",
+                    "type": "integer",
+                    "default": 10,
+                    "required": true
+                },
+                {
+                    "name": "penalty_factor",
+                    "type": "number",
+                    "default": 0.1,
+                    "required": true
+                },
+                {
+                    "name": "lowpass_cutoff",
+                    "type": "integer",
+                    "default": 1000,
+                    "required": true
+                },
+                {
+                    "name": "resample_freq",
+                    "type": "integer",
+                    "default": 4000,
+                    "required": true
+                },
+                {
+                    "name": "delta_pitch",
+                    "type": "number",
+                    "default": 0.005,
+                    "required": true
+                },
+                {
+                    "name": "nccf_ballast",
+                    "type": "integer",
+                    "default": 7000,
+                    "required": true
+                },
+                {
+                    "name": "lowpass_filter_width",
+                    "type": "integer",
+                    "default": 1,
+                    "required": true
+                },
+                {
+                    "name": "upsample_filter_width",
+                    "type": "integer",
+                    "default": 5,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "mfcc",
+            "class_name": "MfccProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "preemph_coeff",
+                    "type": "number",
+                    "default": 0.97,
+                    "required": true
+                },
+                {
+                    "name": "remove_dc_offset",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "window_type",
+                    "type": "string",
+                    "default": "povey",
+                    "required": true,
+                    "options": [
+                        "hamming",
+                        "hanning",
+                        "povey",
+                        "rectangular",
+                        "blackman"
+                    ]
+                },
+                {
+                    "name": "round_to_power_of_two",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "blackman_coeff",
+                    "type": "number",
+                    "default": 0.42,
+                    "required": true
+                },
+                {
+                    "name": "snip_edges",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "num_bins",
+                    "type": "integer",
+                    "default": 23,
+                    "required": true
+                },
+                {
+                    "name": "low_freq",
+                    "type": "integer",
+                    "default": 20,
+                    "required": true
+                },
+                {
+                    "name": "high_freq",
+                    "type": null,
+                    "default": 0,
+                    "required": true
+                },
+                {
+                    "name": "vtln_low",
+                    "type": "integer",
+                    "default": 100,
+                    "required": true
+                },
+                {
+                    "name": "vtln_high",
+                    "type": "integer",
+                    "default": -500,
+                    "required": true
+                },
+                {
+                    "name": "num_ceps",
+                    "type": "integer",
+                    "default": 13,
+                    "required": true
+                },
+                {
+                    "name": "use_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "energy_floor",
+                    "type": null,
+                    "default": 0.0,
+                    "required": true
+                },
+                {
+                    "name": "raw_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "cepstral_lifter",
+                    "type": "number",
+                    "default": 22.0,
+                    "required": true
+                },
+                {
+                    "name": "htk_compat",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "vtln_warp",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "plp",
+            "class_name": "PlpProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "rasta",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "preemph_coeff",
+                    "type": "number",
+                    "default": 0.97,
+                    "required": true
+                },
+                {
+                    "name": "remove_dc_offset",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "window_type",
+                    "type": "string",
+                    "default": "povey",
+                    "required": true,
+                    "options": [
+                        "hamming",
+                        "hanning",
+                        "povey",
+                        "rectangular",
+                        "blackman"
+                    ]
+                },
+                {
+                    "name": "round_to_power_of_two",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "blackman_coeff",
+                    "type": "number",
+                    "default": 0.42,
+                    "required": true
+                },
+                {
+                    "name": "snip_edges",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "num_bins",
+                    "type": "integer",
+                    "default": 23,
+                    "required": true
+                },
+                {
+                    "name": "low_freq",
+                    "type": "integer",
+                    "default": 20,
+                    "required": true
+                },
+                {
+                    "name": "high_freq",
+                    "type": null,
+                    "default": 0,
+                    "required": true
+                },
+                {
+                    "name": "vtln_low",
+                    "type": "integer",
+                    "default": 100,
+                    "required": true
+                },
+                {
+                    "name": "vtln_high",
+                    "type": "integer",
+                    "default": -500,
+                    "required": true
+                },
+                {
+                    "name": "lpc_order",
+                    "type": "integer",
+                    "default": 12,
+                    "required": true
+                },
+                {
+                    "name": "num_ceps",
+                    "type": "integer",
+                    "default": 13,
+                    "required": true
+                },
+                {
+                    "name": "use_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "energy_floor",
+                    "type": null,
+                    "default": 0.0,
+                    "required": true
+                },
+                {
+                    "name": "raw_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "compress_factor",
+                    "type": "number",
+                    "default": 0.3333333333333333,
+                    "required": true
+                },
+                {
+                    "name": "cepstral_lifter",
+                    "type": "integer",
+                    "default": 22,
+                    "required": true
+                },
+                {
+                    "name": "cepstral_scale",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "htk_compat",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "vtln_warp",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "spectrogram",
+            "class_name": "SpectrogramProcessor",
+            "init_args": [
+                {
+                    "name": "sample_rate",
+                    "type": "integer",
+                    "default": 16000,
+                    "required": true
+                },
+                {
+                    "name": "frame_shift",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "frame_length",
+                    "type": "number",
+                    "default": 0.025,
+                    "required": true
+                },
+                {
+                    "name": "dither",
+                    "type": "number",
+                    "default": 1.0,
+                    "required": true
+                },
+                {
+                    "name": "preemph_coeff",
+                    "type": "number",
+                    "default": 0.97,
+                    "required": true
+                },
+                {
+                    "name": "remove_dc_offset",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "window_type",
+                    "type": "string",
+                    "default": "povey",
+                    "required": true,
+                    "options": [
+                        "hamming",
+                        "hanning",
+                        "povey",
+                        "rectangular",
+                        "blackman"
+                    ]
+                },
+                {
+                    "name": "round_to_power_of_two",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "blackman_coeff",
+                    "type": "number",
+                    "default": 0.42,
+                    "required": true
+                },
+                {
+                    "name": "snip_edges",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "energy_floor",
+                    "type": null,
+                    "default": 0.0,
+                    "required": true
+                },
+                {
+                    "name": "raw_energy",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "signal",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "ubm",
+            "class_name": "DiagUbmProcessor",
+            "init_args": [
+                {
+                    "name": "num_gauss",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "num_iters",
+                    "type": "integer",
+                    "default": 4,
+                    "required": true
+                },
+                {
+                    "name": "num_gselect",
+                    "type": "integer",
+                    "default": 15,
+                    "required": true
+                },
+                {
+                    "name": "initial_gauss_proportion",
+                    "type": "number",
+                    "default": 0.5,
+                    "required": true
+                },
+                {
+                    "name": "num_iters_init",
+                    "type": "integer",
+                    "default": 20,
+                    "required": true
+                },
+                {
+                    "name": "num_frames",
+                    "type": "integer",
+                    "default": 500000,
+                    "required": true
+                },
+                {
+                    "name": "subsample",
+                    "type": "integer",
+                    "default": 5,
+                    "required": true
+                },
+                {
+                    "name": "min_gaussian_weight",
+                    "type": "number",
+                    "default": 0.0001,
+                    "required": true
+                },
+                {
+                    "name": "remove_low_count_gaussians",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                },
+                {
+                    "name": "seed",
+                    "type": null,
+                    "default": 0,
+                    "required": true
+                },
+                {
+                    "name": "features",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "vad",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "utterances",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "njobs",
+                    "type": "integer",
+                    "default": 1,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "vtln",
+            "class_name": "VtlnProcessor",
+            "init_args": [
+                {
+                    "name": "num_iters",
+                    "type": "integer",
+                    "default": 15,
+                    "required": true
+                },
+                {
+                    "name": "min_warp",
+                    "type": "number",
+                    "default": 0.85,
+                    "required": true
+                },
+                {
+                    "name": "max_warp",
+                    "type": "number",
+                    "default": 1.25,
+                    "required": true
+                },
+                {
+                    "name": "warp_step",
+                    "type": "number",
+                    "default": 0.01,
+                    "required": true
+                },
+                {
+                    "name": "logdet_scale",
+                    "type": null,
+                    "default": 0.0,
+                    "required": true
+                },
+                {
+                    "name": "norm_type",
+                    "type": "string",
+                    "default": "offset",
+                    "required": true,
+                    "options": []
+                },
+                {
+                    "name": "subsample",
+                    "type": "integer",
+                    "default": 5,
+                    "required": true
+                },
+                {
+                    "name": "features",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "ubm",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "by_speaker",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "utterances",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "ubm",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "group_by",
+                    "type": "string",
+                    "default": "utterance",
+                    "required": true,
+                    "options": []
+                },
+                {
+                    "name": "njobs",
+                    "type": "integer",
+                    "default": 1,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        }
+    ],
+    "postprocessors": [
+        {
+            "class_key": "cmvn",
+            "class_name": "CmvnPostProcessor",
+            "init_args": [
+                {
+                    "name": "dim",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "stats",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "features",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "norm_vars",
+                    "type": "boolean",
+                    "default": true,
+                    "required": true
+                },
+                {
+                    "name": "skip_dims",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                },
+                {
+                    "name": "reverse",
+                    "type": null,
+                    "default": false,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "delta",
+            "class_name": "DeltaPostProcessor",
+            "init_args": [
+                {
+                    "name": "order",
+                    "type": "integer",
+                    "default": 2,
+                    "required": true
+                },
+                {
+                    "name": "window",
+                    "type": "integer",
+                    "default": 2,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "features",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        },
+        {
+            "class_key": "vad",
+            "class_name": "VadPostProcessor",
+            "init_args": [
+                {
+                    "name": "energy_threshold",
+                    "type": "number",
+                    "default": 5.0,
+                    "required": true
+                },
+                {
+                    "name": "energy_mean_scale",
+                    "type": "number",
+                    "default": 0.5,
+                    "required": true
+                },
+                {
+                    "name": "frames_context",
+                    "type": null,
+                    "default": 0,
+                    "required": true
+                },
+                {
+                    "name": "proportion_threshold",
+                    "type": "number",
+                    "default": 0.6,
+                    "required": true
+                }
+            ],
+            "process_args": [
+                {
+                    "name": "features",
+                    "type": null,
+                    "default": null,
+                    "required": true
+                }
+            ],
+            "required_postprocessors": []
+        }
+    ]
+}
