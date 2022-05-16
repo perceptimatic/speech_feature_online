@@ -16,18 +16,7 @@ import {
 } from '@mui/material';
 import { QuestionMark } from '@mui/icons-material';
 import { Box } from '@mui/system';
-import {
-    AnalysisConfig,
-    BaseJobConfig,
-    CombinedAnalysisConfigFields,
-    isPCrepeAnalysisConfigProps,
-    isPKaldiAnalysisConfigProps,
-    JobConfig,
-    PCrepeAnalysisConfigProps,
-    PKaldiAnalysisConfigProps,
-    Postprocessor,
-    StandardAnalysisConfigProps,
-} from '../types';
+import { FieldDisplaySchema, FormItem, JobConfig } from '../types';
 
 interface Action {
     payload?: Partial<JobConfig>;
@@ -43,10 +32,11 @@ export const getEntries = <T,>(obj: T) =>
 
 const makeBaseForm = (): JobConfig => ({
     analyses: {},
-    channel: globalFields.channel.default as number,
+    channel: globalDisplayFields.find(f => f.name === 'channel')!
+        .default as string,
     email: '',
     files: [],
-    res: globalFields.res.default as string,
+    res: globalDisplayFields.find(f => f.name === 'res')!.default as string,
 });
 
 export const jobFormReducer: Reducer<JobConfig, Action> = (
@@ -125,18 +115,24 @@ export default function JobFormField<K extends boolean | string | number>({
     update,
     value,
 }: {
-    config: FormField;
+    config: FormItem;
     update: (val: any) => void;
     value: K;
 }) {
-    switch (config.component) {
+    const component = config.component
+        ? config.component
+        : config.type === 'boolean'
+        ? 'checkbox'
+        : 'text';
+
+    switch (component) {
         case 'checkbox':
             return (
                 <FormControlLabel
                     control={<Checkbox checked={!!value} />}
                     label={
                         <Label
-                            labelText={config.label}
+                            labelText={config.label || config.name}
                             helpLinks={config.helpLinks}
                         />
                     }
@@ -152,11 +148,11 @@ export default function JobFormField<K extends boolean | string | number>({
             return (
                 <TextField
                     sx={{ margin: 1, width: '200px' }}
-                    key={config.field}
+                    key={config.name}
                     type="number"
                     label={
                         <Label
-                            labelText={config.label}
+                            labelText={config.label || config.name}
                             helpLinks={config.helpLinks}
                         />
                     }
@@ -166,7 +162,7 @@ export default function JobFormField<K extends boolean | string | number>({
             );
         case 'radio':
             return (
-                <FormControl key={config.field}>
+                <FormControl key={config.name}>
                     <FormLabel
                         sx={{
                             marginRight: 1,
@@ -174,18 +170,18 @@ export default function JobFormField<K extends boolean | string | number>({
                         }}
                     >
                         <Label
-                            labelText={config.label}
+                            labelText={config.label || ''}
                             helpLinks={config.helpLinks}
                         />
                     </FormLabel>
                     <RadioGroup row defaultValue={config.default}>
                         {config.options!.map(o => (
                             <FormControlLabel
-                                key={o.value}
-                                onChange={() => update(o.value)}
-                                value={o.value}
+                                key={o}
+                                onChange={() => update(o)}
+                                value={o}
                                 control={<Radio />}
-                                label={o.label}
+                                label={o.toUpperCase()}
                             />
                         ))}
                     </RadioGroup>
@@ -197,97 +193,82 @@ export default function JobFormField<K extends boolean | string | number>({
 }
 
 interface ProcessingGroupProps {
-    add: <K extends keyof AnalysisConfig>(k: K) => void;
-    remove: <K extends keyof AnalysisConfig>(k: K) => void;
-    config: AnalysisField;
+    add: (k: string) => void;
+    postProcessors: FormItem[];
+    processorConfig: FormItem;
+    initArgsConfig: FormItem[];
     state: JobConfig;
-    update: <K extends keyof AnalysisConfig>(
-        k: K
-    ) => <K1 extends keyof CombinedAnalysisConfigFields>(
-        k: K1,
-        v: CombinedAnalysisConfigFields[K1]
-    ) => void;
+    remove: (k: string) => void;
+    update: (k: string, v: any) => void;
 }
 
+/* This takes a single Processing field schema and returns the display unit */
 export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
     add,
+    initArgsConfig,
+    postProcessors,
+    processorConfig,
     remove,
-    config,
     state,
     update,
 }) => {
-    const {
-        //avoid clobering outer variable
-        configurationFields: configFields,
-        postprocessors,
-        ...inputConfig
-    } = config;
-    const postProcessing = postprocessors
-        .sort()
-        .map(k => postProcessorFields[k]);
-
-    const groupValues = state.analyses
-        ? state.analyses[inputConfig.field]
+    const existingValues = state.analyses
+        ? state.analyses[processorConfig.name]
         : null;
-
-    //todo: might want caller to bind this
-    const updateField = update(inputConfig.field);
 
     return (
         <Grid container item direction="column" spacing={2}>
             <Grid item>
                 <JobFormField
-                    config={inputConfig}
-                    value={!!groupValues}
+                    config={processorConfig}
+                    value={!!existingValues}
                     update={() =>
-                        groupValues
-                            ? remove(inputConfig.field)
-                            : add(inputConfig.field)
+                        existingValues
+                            ? remove(processorConfig.name)
+                            : add(processorConfig.name)
                     }
                 />
             </Grid>
             <Grid container direction="column" item spacing={2}>
-                {groupValues &&
-                    configFields.map(f => (
-                        <Grid item key={f}>
+                {existingValues &&
+                    initArgsConfig.map(f => (
+                        <Grid item key={f.name}>
                             <JobFormField
-                                config={configurationFields[f]}
+                                config={f}
                                 value={
-                                    getConfiguration(groupValues, f) ??
-                                    configurationFields[f].default
+                                    existingValues.init_args[f.name] ??
+                                    f.default
                                 }
-                                update={val => updateField(f, val)}
+                                update={val => update(f.name, val)}
                             />
                         </Grid>
                     ))}
 
-                {postProcessing.length && groupValues && (
+                {existingValues && (
                     <Grid item alignItems="center" container direction="row">
                         <Typography>
                             <em>Post-processing:</em>&nbsp;
                         </Typography>
-                        {postProcessing.map(f => (
+                        {postProcessors.map(f => (
                             <JobFormField
-                                key={f.field}
+                                key={f.name}
                                 config={f}
                                 value={
-                                    !!(groupValues.postprocessors || []).find(
-                                        p => p === f.field
-                                    )
+                                    !!(
+                                        existingValues.postprocessors || []
+                                    ).find(p => p === f.name)
                                 }
                                 update={(val: boolean) => {
                                     const newVal = val
-                                        ? [f.field as Postprocessor].concat(
-                                              groupValues.postprocessors || []
+                                        ? [f.name].concat(
+                                              existingValues.postprocessors ||
+                                                  []
                                           )
                                         : (
-                                              groupValues.postprocessors || []
-                                          ).filter(
-                                              d =>
-                                                  d !==
-                                                  (f.field as Postprocessor)
-                                          );
-                                    updateField('postprocessors', newVal);
+                                              existingValues.postprocessors ||
+                                              []
+                                          ).filter(d => d !== f.name);
+                                    update('postprocessors', newVal);
                                 }}
                             />
                         ))}
@@ -298,26 +279,10 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
     );
 };
 
-interface FormField {
-    component: 'checkbox' | 'number' | 'radio' | 'text';
-    default?: string | number | string[] | boolean;
-    field:
-        | keyof CombinedAnalysisConfigFields
-        | Postprocessor
-        | keyof BaseJobConfig
-        | keyof AnalysisConfig;
-    helpLinks?: { label: string; href: string }[];
-    label: string | JSX.Element;
-    options?: { label: string; value: string }[];
-    required: boolean;
-    validationRules?: { comparator: '<' | '=' | '>'; value: string | number }[];
-}
-
-//reusable postprocessor fields
-export const postProcessorFields: Record<Postprocessor, FormField> = {
+//postprocessor fields
+export const postProcessorDisplayFields: FieldDisplaySchema = {
     delta: {
         component: 'checkbox',
-        field: 'delta',
         helpLinks: [
             {
                 label: 'Documentation',
@@ -325,11 +290,9 @@ export const postProcessorFields: Record<Postprocessor, FormField> = {
             },
         ],
         label: 'Delta Features',
-        required: false,
     },
     cmvn: {
         component: 'checkbox',
-        field: 'cmvn',
         helpLinks: [
             {
                 label: 'Documentation',
@@ -337,11 +300,9 @@ export const postProcessorFields: Record<Postprocessor, FormField> = {
             },
         ],
         label: 'CMVN',
-        required: false,
     },
     vad: {
         component: 'checkbox',
-        field: 'vad',
         helpLinks: [
             {
                 label: 'Documentation',
@@ -349,88 +310,36 @@ export const postProcessorFields: Record<Postprocessor, FormField> = {
             },
         ],
         label: 'Voice Activity Detection',
-        required: false,
     },
 };
 
-// reusable configuration fields
-export const configurationFields: Record<
-    keyof Omit<
-        StandardAnalysisConfigProps &
-            PKaldiAnalysisConfigProps &
-            PCrepeAnalysisConfigProps,
-        'postprocessors'
-    >,
-    FormField
-> = {
+export const argumentDisplayFields: FieldDisplaySchema = {
     frame_shift: {
         component: 'number',
-        default: 0.01,
-        field: 'frame_shift',
         label: 'Frame shift (seconds)',
-        required: true,
     },
     frame_length: {
         component: 'number',
-        default: 0.025,
-        field: 'frame_length',
         label: 'Frame length (seconds)',
-        required: false,
     },
     max_f0: {
         component: 'number',
-        default: 400,
-        field: 'max_f0',
         label: 'FO max (Hz)',
-        required: true,
     },
     min_f0: {
         component: 'number',
-        default: 50,
-        field: 'min_f0',
         label: 'FO MIN (Hz)',
-        required: true,
     },
     model_capacity: {
         component: 'radio',
-        default: 'full',
-        field: 'model_capacity',
         label: 'Model Capacity',
-        required: true,
-        options: [
-            {
-                label: 'Full',
-                value: 'full',
-            },
-            {
-                label: 'Large',
-                value: 'large',
-            },
-            {
-                label: 'Medium',
-                value: 'medium',
-            },
-            {
-                label: 'Small',
-                value: 'small',
-            },
-            {
-                label: 'Tiny',
-                value: 'tiny',
-            },
-        ],
     },
     snip_edges: {
         component: 'checkbox',
-        default: false,
-        field: 'snip_edges',
         label: 'Snip Edges',
-        required: true,
     },
     window_type: {
         component: 'radio',
-        default: 'hamming',
-        field: 'window_type',
         helpLinks: [
             {
                 label: '1',
@@ -446,61 +355,26 @@ export const configurationFields: Record<
             },
         ],
         label: 'Window Type',
-        options: [
-            {
-                label: 'Hamming',
-                value: 'hamming',
-            },
-            {
-                label: 'Hanning',
-                value: 'hanning',
-            },
-            {
-                label: 'Povey',
-                value: 'povey',
-            },
-            {
-                label: 'Rectangular',
-                value: 'rectangular',
-            },
-            {
-                label: 'Blackman',
-                value: 'blackman',
-            },
-        ],
-        required: true,
     },
 };
 
 //global fields
-
-export const globalFields: Record<
-    keyof Omit<BaseJobConfig, 'files'>,
-    FormField
-> = {
-    channel: {
+export const globalDisplayFields: FormItem[] = [
+    {
+        name: 'channel',
+        type: 'string',
         component: 'radio',
         default: 1,
-        field: 'channel',
         label: 'If recording is in stereo, which channel would you like to keep (1 or 2)?',
-        options: [
-            { label: '1', value: '1' },
-            { label: '2', value: '2' },
-        ],
-        required: true,
-    },
-    email: {
-        component: 'text',
-        field: 'email',
-        default: 'foo@bar.com',
-        label: 'Email',
+        options: ['1', '2'],
         required: true,
     },
 
-    res: {
+    {
+        name: 'res',
         component: 'radio',
         default: '.pkl',
-        field: 'res',
+        type: 'string',
         label: (
             <>
                 Please select the format for your data files,{' '}
@@ -513,152 +387,40 @@ export const globalFields: Record<
                 </Link>
             </>
         ),
-        options: [
-            {
-                label: '.csv',
-                value: '.csv',
-            },
-            {
-                label: '.pkl',
-                value: '.pkl',
-            },
-            {
-                label: '.npz',
-                value: '.npz',
-            },
-        ],
+        options: ['.csv', '.pkl', '.npz'],
         required: true,
     },
-};
+];
 
-interface AnalysisField extends FormField {
-    field: keyof AnalysisConfig;
-    configurationFields:
-        | (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[]
-        | (keyof Omit<PKaldiAnalysisConfigProps, 'postprocessors'>)[]
-        | (keyof Omit<PCrepeAnalysisConfigProps, 'postprocessors'>)[];
-    postprocessors: Postprocessor[];
-}
-
-export const analysisFields: Record<keyof AnalysisConfig, AnalysisField> = {
+export const analysisDisplayFields: FieldDisplaySchema = {
     energy: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'window_type',
-            'snip_edges',
-        ] as (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'energy',
         label: 'Energy',
-        postprocessors: ['delta'],
-        required: false,
     },
     filterbank: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'window_type',
-            'snip_edges',
-        ] as (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'filterbank',
         label: 'Filterbank',
-        postprocessors: ['delta'],
-        required: false,
     },
     mfcc: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'window_type',
-            'snip_edges',
-        ] as (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'mfcc',
         label: 'MFCC',
-        postprocessors: ['cmvn', 'delta', 'vad'],
-        required: false,
     },
     p_crepe: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'model_capacity',
-        ] as (keyof Omit<PCrepeAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'p_crepe',
         label: 'Pitch Estimation (Crepe)',
-        postprocessors: ['delta'],
-        required: false,
     },
     p_kaldi: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'max_f0',
-            'min_f0',
-        ] as (keyof Omit<PKaldiAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'p_kaldi',
         label: 'Pitch Estimation (Kaldi)',
-        postprocessors: ['delta'],
-        required: false,
     },
     plp: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'window_type',
-            'snip_edges',
-        ] as (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'plp',
         label: 'PLP',
-        postprocessors: ['cmvn', 'delta', 'vad'],
-        required: false,
     },
     spectrogram: {
         component: 'checkbox',
-        configurationFields: [
-            'frame_length',
-            'frame_shift',
-            'window_type',
-            'snip_edges',
-        ] as (keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>)[],
-        field: 'spectrogram',
         label: 'Spectrogram',
-        postprocessors: ['delta'],
-        required: false,
     },
-};
-
-/* A typscript wrapper to resolve analysis types (sort of) */
-export const getConfiguration = (
-    analysis:
-        | StandardAnalysisConfigProps
-        | PKaldiAnalysisConfigProps
-        | PCrepeAnalysisConfigProps,
-    field:
-        | keyof Omit<StandardAnalysisConfigProps, 'postprocessors'>
-        | keyof Omit<PKaldiAnalysisConfigProps, 'postprocessors'>
-        | keyof Omit<PCrepeAnalysisConfigProps, 'postprocessors'>
-) => {
-    if (
-        isPKaldiAnalysisConfigProps(analysis) &&
-        !!analysis[field as keyof PKaldiAnalysisConfigProps]
-    ) {
-        return analysis[field as keyof PKaldiAnalysisConfigProps];
-    } else if (
-        isPCrepeAnalysisConfigProps(analysis) &&
-        !!analysis[field as keyof PCrepeAnalysisConfigProps]
-    ) {
-        return analysis[field as keyof PCrepeAnalysisConfigProps];
-    } else {
-        //eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        //@ts-ignore
-        return analysis[field as keyof StandardAnalysisConfigProps];
-    }
 };
 
 export const useFormReducer = () => useReducer(jobFormReducer, makeBaseForm());

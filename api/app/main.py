@@ -17,11 +17,8 @@ from app.schemas import JobIn
 # initialise our app
 app = FastAPI()
 
-if settings.STORAGE_DRIVER == "local":
-    app.mount("/static", StaticFiles(directory="/code/static/"), name="static")
-
 logger = logging.getLogger(__name__)
-
+app.mount("/static", StaticFiles(directory="/code/static/"), name="static")
 celery_app = Celery("speech_features", broker="redis://redis:6379/0")
 
 celery_app.conf.task_routes = {

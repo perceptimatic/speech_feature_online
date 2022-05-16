@@ -38,6 +38,7 @@ module.exports = {
         },
         proxy: {
             '/api': `http://${process.env.API_HOST_PORT}`,
+            '/static': `http://${process.env.API_HOST_PORT}`,
         },
         compress: true,
         port: process.env.REACT_PORT,

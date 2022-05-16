@@ -22,12 +22,11 @@ import {
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import {
-    analysisFields,
-    configurationFields,
-    getConfiguration,
-    getEntries,
+    analysisDisplayFields,
+    argumentDisplayFields,
     getKeys,
-    globalFields,
+    globalDisplayFields,
+    postProcessorDisplayFields,
     ProcessingGroup,
     useFormReducer,
 } from '../Components/JobForm';
@@ -45,42 +44,73 @@ import {
     SuccessModal,
     UploadSuccessModal,
 } from '../Components';
-import {
-    AnalysisConfig,
-    CombinedAnalysisConfigFields,
-    JobConfig,
-    PCrepeAnalysisConfigProps,
-    PKaldiAnalysisConfigProps,
-    StandardAnalysisConfigProps,
-} from '../types';
+import { AnalysisFormGroup, CommonSchema, FormItem, JobConfig } from '../types';
 
 const FormPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [failedFiles, setFailedFiles] = useState<File[]>([]);
     const [invalidFields, setInvalidFields] = useState<string[]>();
+    const [postprocessors, setPostProcessors] = useState<FormItem[]>();
     const [progress, setProgress] = useState<ProgressIncrement>();
+    const [schema, setSchema] = useState<AnalysisFormGroup[]>();
     const [state, dispatch] = useFormReducer();
     const [submissionSuccess, setSubmissionSuccess] = useState<boolean>();
     const [submissionError, setSubmissionError] = useState<AxiosError>();
     const [uploadSuccess, setUploadSucess] = useState<boolean>();
 
     useEffect(() => {
+        const cb = async () => {
+            const res = await fetch(`/static/processor-schema.json`);
+            const schema: CommonSchema = await res.json();
+            const fg = schema.processors.map<AnalysisFormGroup>(g => ({
+                analysis: {
+                    ...analysisDisplayFields[g.class_key],
+                    name: g.class_key,
+                    type: 'boolean',
+                    default: false,
+                    required: false,
+                },
+                init_args: g.init_args.map(g => ({
+                    ...argumentDisplayFields[g.name],
+                    ...g,
+                })),
+            }));
+            setSchema(fg);
+            setPostProcessors(
+                schema.postprocessors.map(p => ({
+                    ...postProcessorDisplayFields[p.class_name],
+                    component: 'checkbox',
+                    default: false,
+                    name: p.class_key,
+                    required: false,
+                    type: 'boolean',
+                }))
+            );
+        };
+
+        cb();
+    }, []);
+
+    useEffect(() => {
         const invalid: string[] = [];
 
-        getKeys(globalFields).forEach(k => {
-            if (globalFields[k].required && !state[k]) {
-                invalid.push(k);
+        globalDisplayFields.forEach(k => {
+            if (
+                globalDisplayFields.find(n => n.name === k.name)!.required &&
+                !state[k.name as keyof JobConfig]
+            ) {
+                invalid.push(k.name);
             }
         });
 
         if (state.analyses) {
             getKeys(state.analyses).forEach(k => {
-                const analysis = analysisFields[k];
-                analysis.configurationFields.forEach(f => {
+                const analysis = schema?.find(g => k === g.analysis.name);
+                analysis?.init_args.forEach(f => {
                     if (
-                        configurationFields[f].required &&
+                        f.required &&
                         !!state.analyses &&
-                        getConfiguration(state.analyses[k]!, f) === undefined
+                        state.analyses[k] === undefined
                     ) {
                         invalid.push(`${k}.${f}`);
                     }
@@ -93,76 +123,69 @@ const FormPage: React.FC = () => {
         }
 
         setInvalidFields(invalid);
-    }, [state]);
+    }, [state, schema]);
 
     const resetForm = () =>
         dispatch({
             type: 'clear',
         });
 
-    const update = <K extends keyof JobConfig>(k: K, v: JobConfig[K]) =>
+    const update = (k: string, v: string | string[] | number | boolean) =>
         dispatch({
             type: 'update',
             payload: { [k]: v },
         });
 
     const updateAnalysis =
-        (ka: keyof AnalysisConfig) =>
-        <K extends keyof CombinedAnalysisConfigFields>(
-            k: K,
-            v: CombinedAnalysisConfigFields[K]
-        ) => {
+        (processorName: string) =>
+        (k: string, v: number | string | boolean) => {
             dispatch({
                 type: 'update',
                 payload: {
                     ...state,
                     analyses: {
                         ...state.analyses,
-                        [ka]: { ...state.analyses[ka], [k]: v },
+                        [processorName]: {
+                            ...state.analyses[processorName],
+                            [k]: v,
+                        },
                     },
                 },
             });
         };
 
-    const addAnalysis = (k: keyof AnalysisConfig) => {
+    const addAnalysis = (key: string) => {
         const newAnalysis = {
-            frame_length: configurationFields.frame_length.default,
-            frame_shift: configurationFields.frame_shift.default,
-        } as CombinedAnalysisConfigFields;
-        if (
-            ['spectrogram', 'energy', 'plp', 'mfcc', 'filterbank'].includes(k)
-        ) {
-            (newAnalysis as StandardAnalysisConfigProps).window_type =
-                configurationFields.window_type.default as string;
-            (newAnalysis as StandardAnalysisConfigProps).snip_edges =
-                configurationFields.snip_edges.default as boolean;
-        } else if (['p_kaldi'].includes(k)) {
-            (newAnalysis as PKaldiAnalysisConfigProps).max_f0 =
-                configurationFields.max_f0.default as number;
-            (newAnalysis as PKaldiAnalysisConfigProps).min_f0 =
-                configurationFields.min_f0.default as number;
-        } else {
-            (newAnalysis as PCrepeAnalysisConfigProps).model_capacity =
-                configurationFields.model_capacity.default as string;
-        }
+            init_args: schema!
+                .find(d => d.analysis.name === key)!
+                .init_args.reduce<Record<string, any>>(
+                    (acc, curr) => ({
+                        ...acc,
+                        [curr.name]: curr.default,
+                    }),
+                    {}
+                ),
+            postprocessors: [],
+        };
+
         dispatch({
             type: 'update',
             payload: {
                 ...state,
                 analyses: {
                     ...state.analyses,
-                    [k]: newAnalysis,
+                    [key]: newAnalysis,
                 },
             },
         });
     };
 
-    const removeAnalysis = (k: keyof AnalysisConfig) => {
-        const analyses = {} as Record<keyof AnalysisConfig, any>;
+    const removeAnalysis = (k: string) => {
+        const analyses = {} as Record<string, any>;
 
         for (const analysis in state.analyses!) {
             if (analysis !== k) {
-                analyses[k] = state.analyses[analysis as keyof AnalysisConfig];
+                analyses[k] = state.analyses[analysis];
             }
         }
 
@@ -425,20 +448,22 @@ const FormPage: React.FC = () => {
                                 direction="column"
                             >
                                 <Grid item container>
-                                    {getEntries(globalFields).map(
-                                        ([key, config]) => (
-                                            <Grid item key={key}>
-                                                <JobFormField
-                                                    config={config}
-                                                    update={update.bind(
-                                                        null,
-                                                        key
-                                                    )}
-                                                    value={state[key]}
-                                                />
-                                            </Grid>
-                                        )
-                                    )}
+                                    {globalDisplayFields.map(f => (
+                                        <Grid item key={f.name}>
+                                            <JobFormField
+                                                config={f}
+                                                update={update.bind(
+                                                    null,
+                                                    f.name
+                                                )}
+                                                value={
+                                                    state[
+                                                        f.name as keyof JobConfig
+                                                    ] as string
+                                                }
+                                            />
+                                        </Grid>
+                                    ))}
                                 </Grid>
                                 <Grid item>
                                     <Typography variant="h6">
@@ -453,18 +478,28 @@ const FormPage: React.FC = () => {
                                     flexWrap="nowrap"
                                 >
                                     <Grid item container direction="column">
-                                        {getEntries(analysisFields).map(
-                                            ([k, config]) => (
+                                        {schema &&
+                                            postprocessors &&
+                                            schema.map(config => (
                                                 <ProcessingGroup
                                                     add={addAnalysis}
-                                                    config={config}
-                                                    key={k}
-                                                    state={state}
-                                                    update={updateAnalysis}
+                                                    postProcessors={
+                                                        postprocessors
+                                                    }
+                                                    initArgsConfig={
+                                                        config.init_args
+                                                    }
+                                                    key={config.analysis.name}
+                                                    processorConfig={
+                                                        config.analysis
+                                                    }
                                                     remove={removeAnalysis}
+                                                    state={state}
+                                                    update={updateAnalysis(
+                                                        config.analysis.name
+                                                    )}
                                                 />
-                                            )
-                                        )}
+                                            ))}
                                     </Grid>
                                     <Grid
                                         alignItems="flex-start"
