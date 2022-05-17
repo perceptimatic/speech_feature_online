@@ -1,50 +1,6 @@
-from typing import Dict, List, Optional, Union
+from typing import Optional
 
-from pydantic import BaseModel, EmailStr, validator
-
-from app.settings import settings
-
-
-class BaseAnalysisConfig(BaseModel):
-    frame_shift: float
-    frame_length: float
-    postprocessors: Optional[List[str]]
-
-
-class StandardAnalysisConfig(BaseAnalysisConfig):
-    window_type: str
-    snip_edges: bool
-
-
-class PKaldiAnalysisConfig(BaseAnalysisConfig):
-    min_f0: int
-    max_f0: int
-
-
-class PCrepeAnalysisConfig(BaseAnalysisConfig):
-    model_capacity: str
-
-
-class JobIn(BaseModel):
-    """Fields that must be included in POST request body to start a job"""
-
-    analyses: Dict[
-        str, Union[PCrepeAnalysisConfig, PKaldiAnalysisConfig, StandardAnalysisConfig]
-    ]
-    channel: int
-    email: str
-    files: List[str]
-    # key should be the analysis name, e.g., 'spectrogram'
-    res: str  # ['.npz', '.mat', '.pkl', '.h5f', '.ark', '']
-
-    @validator("email")
-    def email_valid(cls, v):
-        EmailStr.validate(v)
-        if settings.EMAIL_ALLOWLIST and v.strip() not in settings.EMAIL_ALLOWLIST.split(
-            ","
-        ):
-            raise ValueError("Email not in allow list!")
-        return v
+from pydantic import BaseModel, EmailStr
 
 
 class UserIn(BaseModel):

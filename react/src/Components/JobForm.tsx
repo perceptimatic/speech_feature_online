@@ -16,7 +16,13 @@ import {
 } from '@mui/material';
 import { QuestionMark } from '@mui/icons-material';
 import { Box } from '@mui/system';
-import { FieldDisplaySchema, FormItem, JobConfig } from '../types';
+import {
+    AnalysisConfig,
+    FieldDisplaySchema,
+    FormItem,
+    JobConfig,
+} from '../types';
+import { capitalize } from '../util';
 
 interface Action {
     payload?: Partial<JobConfig>;
@@ -110,6 +116,22 @@ const Label: React.FC<{
 const isBoolean = (arg: boolean | any): arg is boolean =>
     typeof arg === 'boolean';
 
+const resolveInputComponent = (config: FormItem) => {
+    if (config.component) {
+        return config.component;
+    }
+    switch (config.type) {
+        case 'boolean':
+            return 'checkbox';
+        case 'integer':
+            return 'number';
+        case 'number':
+            return 'number';
+        case 'string':
+            return 'radio';
+    }
+};
+
 export default function JobFormField<K extends boolean | string | number>({
     config,
     update,
@@ -119,11 +141,7 @@ export default function JobFormField<K extends boolean | string | number>({
     update: (val: any) => void;
     value: K;
 }) {
-    const component = config.component
-        ? config.component
-        : config.type === 'boolean'
-        ? 'checkbox'
-        : 'text';
+    const component = resolveInputComponent(config);
 
     switch (component) {
         case 'checkbox':
@@ -175,13 +193,13 @@ export default function JobFormField<K extends boolean | string | number>({
                         />
                     </FormLabel>
                     <RadioGroup row defaultValue={config.default}>
-                        {config.options!.map(o => (
+                        {(config.options || []).map(o => (
                             <FormControlLabel
                                 key={o}
                                 onChange={() => update(o)}
                                 value={o}
                                 control={<Radio />}
-                                label={o.toUpperCase()}
+                                label={capitalize(o)}
                             />
                         ))}
                     </RadioGroup>
@@ -199,7 +217,7 @@ interface ProcessingGroupProps {
     initArgsConfig: FormItem[];
     state: JobConfig;
     remove: (k: string) => void;
-    update: (k: string, v: any) => void;
+    update: (processorName: string, slice: Partial<AnalysisConfig>) => void;
 }
 
 /* This takes a single Processing field schema and returns the display unit */
@@ -215,6 +233,19 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
     const existingValues = state.analyses
         ? state.analyses[processorConfig.name]
         : null;
+
+    const updateInitArgs = (field: string, val: number | string | boolean) =>
+        update(processorConfig.name, {
+            init_args: {
+                ...state.analyses[processorConfig.name].init_args,
+                [field]: val,
+            },
+        });
+
+    const updatePostProcessors = (postprocessors: string[]) =>
+        update(processorConfig.name, {
+            postprocessors,
+        });
 
     return (
         <Grid container item direction="column" spacing={2}>
@@ -239,7 +270,7 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                                     existingValues.init_args[f.name] ??
                                     f.default
                                 }
-                                update={val => update(f.name, val)}
+                                update={val => updateInitArgs(f.name, val)}
                             />
                         </Grid>
                     ))}
@@ -268,7 +299,7 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                                               existingValues.postprocessors ||
                                               []
                                           ).filter(d => d !== f.name);
-                                    update('postprocessors', newVal);
+                                    updatePostProcessors(newVal);
                                 }}
                             />
                         ))}

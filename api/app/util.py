@@ -1,4 +1,10 @@
+from datetime import datetime
+
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from app.models import User, Role
+from app.schemas import UserIn
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -27,7 +33,3 @@ async def create_user(db: Session, user: UserIn):
     db.commit()
 
     return new_user
-
-    # migration is here: recup_dir.314/f64977120.py
-    # functional models: recup_dir.739/f163962112.java
-    # probably better: recup_dir.749/f168132832.java

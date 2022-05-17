@@ -44,7 +44,13 @@ import {
     SuccessModal,
     UploadSuccessModal,
 } from '../Components';
-import { AnalysisFormGroup, CommonSchema, FormItem, JobConfig } from '../types';
+import {
+    AnalysisConfig,
+    AnalysisFormGroup,
+    CommonSchema,
+    FormItem,
+    JobConfig,
+} from '../types';
 
 const FormPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
@@ -136,23 +142,24 @@ const FormPage: React.FC = () => {
             payload: { [k]: v },
         });
 
-    const updateAnalysis =
-        (processorName: string) =>
-        (k: string, v: number | string | boolean) => {
-            dispatch({
-                type: 'update',
-                payload: {
-                    ...state,
-                    analyses: {
-                        ...state.analyses,
-                        [processorName]: {
-                            ...state.analyses[processorName],
-                            [k]: v,
-                        },
+    const updateAnalysis = (
+        processorName: string,
+        slice: Partial<AnalysisConfig>
+    ) => {
+        dispatch({
+            type: 'update',
+            payload: {
+                ...state,
+                analyses: {
+                    ...state.analyses,
+                    [processorName]: {
+                        ...state.analyses[processorName],
+                        ...slice,
                     },
                 },
-            });
-        };
+            },
+        });
+    };
 
     const addAnalysis = (key: string) => {
         const newAnalysis = {
@@ -495,9 +502,7 @@ const FormPage: React.FC = () => {
                                                     }
                                                     remove={removeAnalysis}
                                                     state={state}
-                                                    update={updateAnalysis(
-                                                        config.analysis.name
-                                                    )}
+                                                    update={updateAnalysis}
                                                 />
                                             ))}
                                     </Grid>

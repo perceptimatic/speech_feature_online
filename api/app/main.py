@@ -5,14 +5,14 @@ from uuid import uuid4
 import aiofiles
 import boto3
 from celery import Celery
-from fastapi import FastAPI, File, HTTPException, status, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, status, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from pydantic.errors import PathNotExistsError
 from pydantic.error_wrappers import ErrorWrapper
 
 from app.settings import settings
-from app.schemas import JobIn
+from app.validators import validate_job_request
 
 # initialise our app
 app = FastAPI()
@@ -28,6 +28,7 @@ celery_app.conf.task_routes = {
 
 @app.get("/api/temp-creds")
 async def get_temp_creds():
+    """Fetch temporary S3 creds for uploading a file through the front end"""
     if settings.STORAGE_DRIVER != "s3":
         raise HTTPException(
             status_code=400, detail="Application not configured for this storage driver"
@@ -41,18 +42,20 @@ async def get_temp_creds():
 
 
 @app.post("/api/shennong-job", response_model=bool, status_code=status.HTTP_201_CREATED)
-async def store_shennong_job(
-    job: JobIn,
-):
+async def store_shennong_job(request: Request):
     """Create a new job and return."""
 
-    for file in job.files:
+    job = await request.json()
+
+    for file in job["files"]:
         if settings.STORAGE_DRIVER == "local" and not path.exists(file):
             raise RequestValidationError(
                 [ErrorWrapper(PathNotExistsError(path=file), "/api/shennong-job")]
             )
 
-    celery_app.send_task("app.worker.process_shennong_job", [job.files, job.dict()])
+    validate_job_request(job)
+
+    celery_app.send_task("app.worker.process_shennong_job", [job.pop("files"), job])
     return True
 
 

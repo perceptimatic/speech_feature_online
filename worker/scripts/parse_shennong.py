@@ -7,28 +7,23 @@ from typing import List, Type, Union
 # make sure the app module in in the python path
 syspath.insert(0, ".")
 
-from shennong.processor import (
-    BottleneckProcessor,
-    CrepePitchProcessor,
-    EnergyProcessor,
-    FilterbankProcessor,
-    KaldiPitchProcessor,
-    MfccProcessor,
-    PlpProcessor,
-    SpectrogramProcessor,
-    VtlnProcessor,
-)
-
-from shennong.postprocessor import (
-    CmvnPostProcessor,
-    DeltaPostProcessor,
-    VadPostProcessor,
-)
 
 from shennong.processor.base import FeaturesProcessor
+from shennong.processor.bottleneck import BottleneckProcessor
+from shennong.processor.energy import EnergyProcessor
+from shennong.processor.filterbank import FilterbankProcessor
+from shennong.processor.mfcc import MfccProcessor
+from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
+from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
+from shennong.processor.plp import PlpProcessor
+from shennong.processor.spectrogram import SpectrogramProcessor
 from shennong.processor.ubm import DiagUbmProcessor
-from shennong.postprocessor.base import FeaturesPostProcessor
+from shennong.processor.vtln import VtlnProcessor
 
+from shennong.postprocessor.base import FeaturesPostProcessor
+from shennong.postprocessor.cmvn import CmvnPostProcessor
+from shennong.postprocessor.delta import DeltaPostProcessor
+from shennong.postprocessor.vad import VadPostProcessor
 
 processor_class_map = {
     "bottleneck": BottleneckProcessor,
@@ -43,6 +38,30 @@ processor_class_map = {
     "vtln": VtlnProcessor,
 }
 
+window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
+
+processor_options = {
+    # https://github.com/bootphon/shennong/blob/master/shennong/processor/bottleneck.py#L509
+    "bottleneck": {"weights": ["BabelMulti", "FisherMono", "FisherMulti"]},
+    "crepe": {"model_capacity": ["full", "large", "medium", "small", "tiny"]},
+    # https://github.com/bootphon/shennong/blob/master/shennong/processor/energy.py#L26
+    "energy": {"window_type": window_options, "compression": ["log", "sqrt", "off"]},
+    "filterbank": {
+        "window_type": window_options,
+    },
+    "mfcc": {
+        "window_type": window_options,
+    },
+    "plp": {
+        "window_type": window_options,
+    },
+    "spectrogram": {
+        "window_type": window_options,
+    },
+    # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py#L156
+    "vtln": {"norm_type": ["offset", "none", "diag"]},
+}
+
 postprocessor_class_map = {
     "cmvn": CmvnPostProcessor,
     "delta": DeltaPostProcessor,
@@ -50,34 +69,16 @@ postprocessor_class_map = {
 }
 
 
-global_options = {
-    "model_capacity": [
-        "full",
-        "large",
-        "medium",
-        "small",
-        "tiny",
-    ],
-    "window_type": [
-        "hamming",
-        "hanning",
-        "povey",
-        "rectangular",
-        "blackman",
-    ],
-}
-
-
 def stringify_type(t: Union[Type, None]):
     if t == None:
         return None
-    elif t.__name__ == "str":
+    elif t == str:
         return "string"
-    elif t.__name__ == "bool":
+    elif t == bool:
         return "boolean"
-    elif t.__name__ == "float":
+    elif t == float:
         return "number"
-    elif t.__name__ == "int":
+    elif t == int:
         return "integer"
     raise ValueError(f"Unknown type {t}!")
 
@@ -110,9 +111,7 @@ class Arg:
     @default.setter
     def default(self, value):
         self._default = value if not value == inspect._empty else None
-        self._type = type(self._default) if self._default else None
-        if self._type and stringify_type(self._type) == "string":
-            self.options = global_options.get(self.name, [])
+        self._type = type(self._default) if self._default is not None else None
 
     @property
     def type(self):
@@ -154,17 +153,26 @@ def build_processor_spec(class_key: str, Processor: FeaturesProcessor):
         class_key=class_key,
         processor_class=Processor,
     )
+
+    # todo: may be simpler to use native introspection:
+    # https://github.com/bootphon/shennong/blob/master/shennong/base.py#L86
     for p in inspect.signature(Processor).parameters.values():
-        spec = Arg(p.name)
-        spec.default = p.default
-        processor.init_args.append(spec)
+        arg = Arg(p.name)
+        arg.default = p.default
+        if arg.type == str:
+            try:
+                arg.options = processor_options[class_key][arg.name]
+            except KeyError:
+                arg.options = []
+
+        processor.init_args.append(arg)
 
     for k, v in inspect.signature(Processor.process).parameters.items():
         if k == "self":
             continue
-        spec = Arg(v.name)
-        spec.default = v.default
-        processor.process_args.append(spec)
+        arg = Arg(v.name)
+        arg.default = v.default
+        processor.process_args.append(arg)
 
     return processor
 

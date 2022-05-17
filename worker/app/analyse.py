@@ -7,39 +7,53 @@ import uuid
 from zipfile import ZipFile
 
 import boto3
+
+from shennong import FeaturesCollection
 from shennong.audio import Audio
-from shennong.processor.spectrogram import SpectrogramProcessor
+from shennong.processor.bottleneck import BottleneckProcessor
+from shennong.processor.energy import EnergyProcessor
 from shennong.processor.filterbank import FilterbankProcessor
 from shennong.processor.mfcc import MfccProcessor
-from shennong.processor.plp import PlpProcessor
-from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
 from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
-from shennong.processor.energy import EnergyProcessor
+from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
+from shennong.processor.plp import PlpProcessor
+from shennong.processor.spectrogram import SpectrogramProcessor
+from shennong.processor.ubm import DiagUbmProcessor
+from shennong.processor.vtln import VtlnProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.vad import VadPostProcessor
-from shennong import FeaturesCollection
+
 
 from app.settings import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
 
-def resolve_processor(processor_name: str, settings: Dict[str, Any]):
-    if processor_name == "spectrogram":
-        return SpectrogramProcessor(**settings)
-    if processor_name == "filterbank":
-        return FilterbankProcessor(**settings)
-    if processor_name == "mfcc":
-        return MfccProcessor(**settings)
-    if processor_name == "plp":
-        return PlpProcessor(**settings)
-    if processor_name == "p_kaldi":
-        return KaldiPitchProcessor(**settings)
-    if processor_name == "p_crepe":
-        return CrepePitchProcessor(**settings)
+def resolve_processor(processor_name: str, init_args: Dict[str, Any]):
+
+    if processor_name == "bottleneck":
+        return BottleneckProcessor(**init_args)
     if processor_name == "energy":
-        return EnergyProcessor(**settings)
+        return EnergyProcessor(**init_args)
+    if processor_name == "crepe":
+        return CrepePitchProcessor(**init_args)
+    if processor_name == "filterbank":
+        return FilterbankProcessor(**init_args)
+    if processor_name == "kaldi_pitch":
+        return KaldiPitchProcessor(**init_args)
+    if processor_name == "mfcc":
+        return MfccProcessor(**init_args)
+    if processor_name == "plp":
+        return PlpProcessor(**init_args)
+    if processor_name == "spectrogram":
+        return SpectrogramProcessor(**init_args)
+    if processor_name == "ubm":
+        return DiagUbmProcessor(**init_args)
+    if processor_name == "vtln":
+        return VtlnProcessor(**init_args)
+
+    raise ValueError(f"unknown processor: {processor_name}")
 
 
 class CmvnWrapper:
@@ -108,7 +122,7 @@ class Analyser:
             settings = settings.copy()
             settings.pop("sample_rate")
             postprocessors.append("crepe")
-        processor = resolve_processor(processor_type, settings)
+        processor = resolve_processor(processor_type, settings["init_args"])
         self.collection[processor_type] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
