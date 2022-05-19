@@ -6,7 +6,7 @@ from app.validators import (
     _validate_top_level_fields,
     check_type,
     find,
-    raise_exception,
+    raise_422,
     ValidationViolation,
 )
 
@@ -34,7 +34,7 @@ def test_raise():
     """test the exception factory"""
     violation = ValidationViolation("field1", "this is a test")
     with raises(HTTPException):
-        raise_exception([violation])
+        raise_422([violation])
 
 
 def test_top_level_required_check():
