@@ -21,7 +21,7 @@ def find(haystack: List[Any], cb: Callable):
     return next(item for item in haystack if cb(item))
 
 
-def raise_exception(messages: List[ValidationViolation]):
+def raise_422(messages: List[ValidationViolation]):
     """raise the exeption"""
     detail = dumps({m.field: m.message for m in messages})
     raise HTTPException(422, detail)
@@ -38,10 +38,9 @@ def validate_job_request(request: dict):
 def check_type(userval: Any, spec: Any):
     """Check type against schema"""
     if spec["type"] == "string":
-        if spec.get("options", None):
+        if spec.get("options"):
             return userval in spec["options"]
-        else:
-            return isinstance(userval, str)
+        return isinstance(userval, str)
 
     elif spec["type"] == "integer":
         return isinstance(userval, int)
@@ -59,13 +58,13 @@ def _validate_top_level_fields(request: dict):
     violations = []
 
     for required_field in ["channel", "email", "files", "res"]:
-        if not request.get(required_field, None):
+        if not request.get(required_field):
             violations.append(
                 ValidationViolation(required_field, f"{required_field} is required")
             )
 
     if violations:
-        raise_exception(violations)
+        raise_422(violations)
 
     if request["channel"] not in [1, 2]:
         violations.append(
@@ -97,7 +96,7 @@ def _validate_top_level_fields(request: dict):
         violations.append(ValidationViolation("email", "email not in allow list"))
 
     if violations:
-        raise_exception(violations)
+        raise_422(violations)
 
     return True
 
@@ -107,9 +106,9 @@ def _validate_analyses(request: dict, schema: dict):
 
     violations = []
 
-    if not request.get("analyses", None):
+    if not request.get("analyses"):
         violations.append(ValidationViolation("analyses", "analyses field is required"))
-        raise_exception(violations)
+        raise_422(violations)
 
     processor_list = [p["class_key"] for p in schema["processors"]]
 
@@ -129,13 +128,13 @@ def _validate_analyses(request: dict, schema: dict):
             )
 
     if violations:
-        raise_exception(violations)
+        raise_422(violations)
 
     for key, analysis in request["analyses"].items():
         processor_schema = find(schema["processors"], lambda x: x["class_key"] == key)
         init_args = analysis["init_args"]
         for arg in processor_schema["init_args"]:
-            if arg.get("required", None) and not init_args.get(arg["name"], None):
+            if arg.get("required") and not init_args.get(arg["name"]):
                 violations.append(
                     ValidationViolation(
                         arg["name"],
@@ -143,7 +142,7 @@ def _validate_analyses(request: dict, schema: dict):
                     )
                 )
                 continue
-            if init_args.get(arg["name"], None) and not check_type(
+            if init_args.get(arg["name"]) and not check_type(
                 init_args.get(arg["name"]), arg
             ):
                 violations.append(
@@ -154,6 +153,6 @@ def _validate_analyses(request: dict, schema: dict):
                 )
 
     if violations:
-        raise_exception(violations)
+        raise_422(violations)
 
     return True
