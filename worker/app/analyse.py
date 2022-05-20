@@ -100,20 +100,23 @@ class Analyser:
         return postprocessor.process(self.collection[processor_type])
 
     def process(self, processor_type: str, settings: Dict[str, Any]):
-        postprocessors = settings.pop("postprocessors") or []
+        postprocessors = settings["postprocessors"] or []
         settings["sample_rate"] = self.sound.sample_rate
+        init_args = {k: v for k, v in settings.items() if k not in ["postprocessors"]}
         if processor_type == "p_kaldi":
             postprocessors.append("kaldi")
         if processor_type == "p_crepe":
             settings = settings.copy()
-            settings.pop("sample_rate")
             postprocessors.append("crepe")
-        processor = resolve_processor(processor_type, settings)
+            init_args.pop("sample_rate")
+        processor = resolve_processor(processor_type, init_args)
         self.collection[processor_type] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
                 key = f"{processor_type}_{pp}"
+                logger.info(f"starting {key} postprocessor")
                 self.collection[key] = self.postprocess(pp, processor_type)
+                logger.info(f"finished {key} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):
@@ -163,8 +166,8 @@ class LocalFileManager(AbstractContextManager):
 
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
-        for pth in [*self.result_dirs, *self.input_paths]:
-            dirpath = path.dirname(pth) if path.isfile(pth) else pth
+        for filepath in [*self.result_dirs, *self.input_paths]:
+            dirpath = path.dirname(filepath) if path.isfile(filepath) else filepath
             with scandir(dirpath) as it:
                 for entry in it:
                     try:
@@ -264,10 +267,13 @@ def process_data(
             collection = FeaturesCollection()
             local_path = manager.load(file_path)
             analyser = Analyser(local_path, channel, collection)
+            logger.info(f"starting {file_path}")
 
             for k, v in settings.items():
+                logger.info(f"starting {k}")
                 analyser.process(k, v)
-            """ Note that csv serializers save a csv and a json file,
+                logger.info(f"finished {k}")
+            """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
                 https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
             """
@@ -279,6 +285,7 @@ def process_data(
                 serializer = None
                 outpath = manager.register_result_path(local_path, res_type)
             analyser.collection.save(outpath, serializer=serializer)
+            logger.info(f"saved {file_path}")
 
         # storeManager has kept track of temp result paths
         url = manager.store()

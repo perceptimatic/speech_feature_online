@@ -42,17 +42,6 @@ interface CredentialsOptions {
     sessionToken?: string;
 }
 
-const getS3KeyBaseName = (path: string) => {
-    let key = path;
-
-    try {
-        key = path.split('/')[1];
-        //eslint-disable-next-line no-empty
-    } catch (e) {}
-
-    return key;
-};
-
 export const isUploadError = (arg: UploadError | any): arg is UploadError =>
     !!(arg as UploadError).error;
 
@@ -102,26 +91,27 @@ const postFilesToS3 = async (
 
     const s3 = getS3(credentialResponse);
 
+    /* assign a random prefix to prevent files existing with the same name */
+    const prefix = Math.random().toString(36).slice(2);
+
     return Promise.all(
         files.map(f => {
-            const ret = s3.upload({
+            const request = s3.upload({
                 Body: f,
                 Bucket: process.env.BUCKET_NAME!,
-                Key: f.name,
+                Key: `${prefix}/${f.name}`,
             });
 
-            ret.on('httpUploadProgress', p => {
+            request.on('httpUploadProgress', p => {
                 const inc = new ProgressIncrement(f.name, p.loaded, p.total);
                 progressCb(inc);
             });
 
-            return ret.promise().then(
-                d => {
-                    return {
-                        remoteFileName: d.Key,
-                        originalFileName: f.name,
-                    };
-                },
+            return request.promise().then(
+                d => ({
+                    remoteFileName: d.Key,
+                    originalFileName: f.name,
+                }),
                 err => new UploadError('Upload failed!', err, f)
             );
         })
@@ -139,7 +129,7 @@ export const removeFileFromS3 = async (key: string) => {
     return s3
         .deleteObject({
             Bucket: process.env.BUCKET_NAME!,
-            Key: getS3KeyBaseName(key),
+            Key: key,
         })
         .promise();
 };

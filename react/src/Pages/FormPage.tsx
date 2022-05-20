@@ -176,7 +176,7 @@ const FormPage: React.FC = () => {
     };
     const uploadFiles = async (files: File[]) => {
         let failures: File[] = failedFiles.slice();
-        return postFiles(files, p => setProgress(p))
+        return postFiles(files, setProgress)
             .then(r => {
                 let success = true;
                 const paths = r
@@ -189,8 +189,8 @@ const FormPage: React.FC = () => {
                             return res.remoteFileName;
                         } else if (isUploadError(res)) {
                             success = false;
-                            if (res.file && !failures.includes(res.file!)) {
-                                failures.push(res.file!);
+                            if (res.file && !failures.includes(res.file)) {
+                                failures.push(res.file);
                             }
                         }
                     })
@@ -374,9 +374,7 @@ const FormPage: React.FC = () => {
                                                             e.currentTarget
                                                                 .files
                                                         )
-                                                    ).then(a =>
-                                                        setUploadSucess(!!a)
-                                                    );
+                                                    ).then(setUploadSucess);
                                                 }
                                             }}
                                         />
@@ -511,7 +509,9 @@ const FormPage: React.FC = () => {
                                             }
                                         />
                                         <SummaryItem
-                                            content={state.files.join(', ')}
+                                            content={state.files
+                                                .map(getFileBaseName)
+                                                .join(', ')}
                                             label="Files"
                                             missingOnClick={() =>
                                                 setActiveStep(1)
@@ -629,7 +629,9 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                                         <Delete />
                                     </ListItemIcon>
                                 </ListItemButton>
-                                <ListItemText>{f}</ListItemText>
+                                <ListItemText>
+                                    {getFileBaseName(f)}
+                                </ListItemText>
                             </ListItem>
                         </List>
                     ))}
@@ -675,6 +677,9 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
         )}
     </Grid>
 );
+
+const getFileBaseName = (filepath: string) =>
+    filepath.replaceAll(/(.+)\//g, '');
 
 interface SummaryItemProps {
     content?: string;
