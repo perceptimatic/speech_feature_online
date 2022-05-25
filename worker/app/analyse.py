@@ -51,7 +51,8 @@ def resolve_postprocessor(class_key: str, features=None):
         module = import_module(f"shennong.postprocessor.{class_key}")
         return module.__dict__[class_name]()
     except ImportError:
-        return resolve_processor(class_key, {})
+        module = import_module(f"shennong.processor.{class_key}")
+        return module.__dict__[class_name]()
 
 
 class Analyser:
