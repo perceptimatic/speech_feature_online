@@ -266,7 +266,13 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                     }
                 />
             </Grid>
-            <Grid container direction="column" item spacing={2}>
+            <Grid
+                sx={{ marginLeft: '10px' }}
+                container
+                direction="column"
+                item
+                spacing={2}
+            >
                 {existingValues &&
                     initArgsConfig.map(f => (
                         <Grid item key={f.name}>
@@ -283,39 +289,58 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
 
                 {existingValues && (
                     <Grid item alignItems="center" container direction="row">
-                        <Typography>
-                            <em>Post-processing:</em>&nbsp;
-                        </Typography>
-                        {postProcessors.map(f => (
-                            <JobFormField
-                                config={f}
-                                disabled={requiredPostprocessors.includes(
-                                    f.name
-                                )}
-                                key={f.name}
-                                update={(val: boolean) => {
-                                    const newVal = val
-                                        ? [f.name].concat(
-                                              existingValues.postprocessors ||
+                        <PostProcessorContainer>
+                            {postProcessors.map(f => (
+                                <JobFormField
+                                    config={f}
+                                    disabled={requiredPostprocessors.includes(
+                                        f.name
+                                    )}
+                                    key={f.name}
+                                    update={(val: boolean) => {
+                                        const newVal = val
+                                            ? [f.name].concat(
+                                                  existingValues.postprocessors ||
+                                                      []
+                                              )
+                                            : (
+                                                  existingValues.postprocessors ||
                                                   []
-                                          )
-                                        : (
-                                              existingValues.postprocessors ||
-                                              []
-                                          ).filter(d => d !== f.name);
-                                    updatePostProcessors(newVal);
-                                }}
-                                value={
-                                    !!(
-                                        existingValues.postprocessors || []
-                                    ).find(p => p === f.name)
-                                }
-                            />
-                        ))}
+                                              ).filter(d => d !== f.name);
+                                        updatePostProcessors(newVal);
+                                    }}
+                                    value={
+                                        !!(
+                                            existingValues.postprocessors || []
+                                        ).find(p => p === f.name)
+                                    }
+                                />
+                            ))}
+                        </PostProcessorContainer>
                     </Grid>
                 )}
             </Grid>
         </Grid>
+    );
+};
+
+const PostProcessorContainer: React.FC = ({ children }) => {
+    return (
+        <Box
+            sx={{
+                borderColor: theme => theme.palette.primary.main,
+                borderRadius: '5px',
+                borderStyle: 'solid',
+                borderWidth: '1px',
+                padding: '10px',
+                width: '90%',
+            }}
+        >
+            <Typography>
+                <em>Post-processing:</em>&nbsp;
+            </Typography>
+            {children}
+        </Box>
     );
 };
 

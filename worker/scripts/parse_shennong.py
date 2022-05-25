@@ -86,7 +86,7 @@ window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
 processor_options = {
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/bottleneck.py#L509
     "bottleneck": {"weights": ["BabelMulti", "FisherMono", "FisherMulti"]},
-    "crepe": {"model_capacity": ["full", "large", "medium", "small", "tiny"]},
+    "pitch_crepe": {"model_capacity": ["full", "large", "medium", "small", "tiny"]},
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/energy.py#L26
     "energy": {"window_type": window_options, "compression": ["log", "sqrt", "off"]},
     "filterbank": {
