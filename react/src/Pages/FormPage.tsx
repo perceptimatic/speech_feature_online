@@ -24,6 +24,7 @@ import { Delete } from '@mui/icons-material';
 import {
     analysisDisplayFields,
     argumentDisplayFields,
+    getEntries,
     getKeys,
     globalDisplayFields,
     postProcessorDisplayFields,
@@ -68,27 +69,29 @@ const FormPage: React.FC = () => {
         const cb = async () => {
             const res = await fetch(`/static/processor-schema.json`);
             const schema: CommonSchema = await res.json();
-            const fg = schema.processors.map<AnalysisFormGroup>(g => ({
-                analysis: {
-                    ...analysisDisplayFields[g.class_key],
-                    name: g.class_key,
-                    type: 'boolean',
-                    default: false,
-                    required: false,
-                },
-                init_args: g.init_args.map(g => ({
-                    ...argumentDisplayFields[g.name],
-                    ...g,
-                })),
-                required_postprocessors: g.required_postprocessors,
-            }));
+            const fg = getEntries(schema.processors).map<AnalysisFormGroup>(
+                ([k, v]) => ({
+                    analysis: {
+                        ...analysisDisplayFields[k],
+                        name: k,
+                        type: 'boolean',
+                        default: false,
+                        required: false,
+                    },
+                    init_args: v.init_args.map(iArg => ({
+                        ...argumentDisplayFields[iArg.name],
+                        ...iArg,
+                    })),
+                    required_postprocessors: v.required_postprocessors,
+                })
+            );
             setSchema(fg);
             setPostProcessors(
-                schema.postprocessors.map(p => ({
-                    ...postProcessorDisplayFields[p.class_name],
+                getKeys(schema.postprocessors).map(k => ({
+                    ...postProcessorDisplayFields[k],
                     component: 'checkbox',
                     default: false,
-                    name: p.class_key,
+                    name: k,
                     required: false,
                     type: 'boolean',
                 }))
@@ -163,17 +166,17 @@ const FormPage: React.FC = () => {
     };
 
     const addAnalysis = (key: string) => {
+        const schemaEntry = schema!.find(d => d.analysis.name === key)!;
+
         const newAnalysis = {
-            init_args: schema!
-                .find(d => d.analysis.name === key)!
-                .init_args.reduce<Record<string, any>>(
-                    (acc, curr) => ({
-                        ...acc,
-                        [curr.name]: curr.default,
-                    }),
-                    {}
-                ),
-            postprocessors: [],
+            init_args: schemaEntry.init_args.reduce<Record<string, any>>(
+                (acc, curr) => ({
+                    ...acc,
+                    [curr.name]: curr.default,
+                }),
+                {}
+            ),
+            postprocessors: schemaEntry.required_postprocessors,
         };
 
         dispatch({
@@ -485,7 +488,12 @@ const FormPage: React.FC = () => {
                                     item
                                     flexWrap="nowrap"
                                 >
-                                    <Grid item container direction="column">
+                                    <Grid
+                                        item
+                                        xs={9}
+                                        container
+                                        direction="column"
+                                    >
                                         {schema &&
                                             postprocessors &&
                                             schema.map(config => (
@@ -515,6 +523,7 @@ const FormPage: React.FC = () => {
                                         container
                                         direction="column"
                                         item
+                                        xs={3}
                                     >
                                         <Button
                                             disabled={

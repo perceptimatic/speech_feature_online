@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from json import dumps, loads
-from typing import Any, Callable, List
+from typing import Any, List
 
 from pydantic import EmailStr
 from fastapi import HTTPException
@@ -14,11 +14,6 @@ class ValidationViolation:
 
     field: str
     message: str
-
-
-def find(haystack: List[Any], cb: Callable):
-    """return first item that returns true"""
-    return next(item for item in haystack if cb(item))
 
 
 def raise_422(messages: List[ValidationViolation]):
@@ -49,7 +44,7 @@ def check_type(userval: Any, spec: Any):
         return isinstance(userval, bool)
 
     elif spec["type"] == "number":
-        return isinstance(userval, float)
+        return isinstance(userval, float) or isinstance(userval, int)
 
     raise ValueError(f"Unknown schema type: {spec['type']}")
 
@@ -110,7 +105,7 @@ def _validate_analyses(request: dict, schema: dict):
         violations.append(ValidationViolation("analyses", "analyses field is required"))
         raise_422(violations)
 
-    processor_list = [p["class_key"] for p in schema["processors"]]
+    processor_list = schema["processors"].keys()
 
     # validate shape
     for key, val in request["analyses"].items():
@@ -131,14 +126,14 @@ def _validate_analyses(request: dict, schema: dict):
         raise_422(violations)
 
     for key, analysis in request["analyses"].items():
-        processor_schema = find(schema["processors"], lambda x: x["class_key"] == key)
+        processor_schema = schema["processors"][key]
         init_args = analysis["init_args"]
         for arg in processor_schema["init_args"]:
-            if arg.get("required") and not init_args.get(arg["name"]):
+            if arg.get("required") and init_args.get(arg["name"]) == None:
                 violations.append(
                     ValidationViolation(
                         arg["name"],
-                        f"{analysis} processor is missing required field `{arg['name']}`",
+                        f"{key} processor is missing required field `{arg['name']}`",
                     )
                 )
                 continue
@@ -156,7 +151,7 @@ def _validate_analyses(request: dict, schema: dict):
                 violations.append(
                     ValidationViolation(
                         pp,
-                        f"{analysis} processor requires postprocessor `{pp}`",
+                        f"{key} processor requires postprocessor `{pp}`",
                     )
                 )
 

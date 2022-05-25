@@ -38,12 +38,11 @@ export type FieldDisplaySchema = Record<string, FieldDisplayItem>;
 export interface CommonSchema {
     title: string;
     description: string;
-    processors: ProcessorSchema[];
-    postprocessors: PostprocessorSchema[];
+    processors: Record<string, ProcessorSchema>;
+    postprocessors: Record<string, PostprocessorSchema>;
 }
 
 export interface PostprocessorSchema {
-    class_key: string;
     class_name: string;
     init_args: ProcessorFieldSchema[];
 }

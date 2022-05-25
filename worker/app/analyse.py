@@ -1,4 +1,6 @@
 from contextlib import AbstractContextManager
+from importlib import import_module
+from json import loads
 import logging
 from os import mkdir, path, remove, rmdir, scandir
 import tempfile
@@ -7,39 +9,27 @@ import uuid
 from zipfile import ZipFile
 
 import boto3
-from shennong.audio import Audio
-from shennong.processor.spectrogram import SpectrogramProcessor
-from shennong.processor.filterbank import FilterbankProcessor
-from shennong.processor.mfcc import MfccProcessor
-from shennong.processor.plp import PlpProcessor
-from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
-from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
-from shennong.processor.energy import EnergyProcessor
-from shennong.postprocessor.cmvn import CmvnPostProcessor
-from shennong.postprocessor.delta import DeltaPostProcessor
-from shennong.postprocessor.vad import VadPostProcessor
+
 from shennong import FeaturesCollection
+from shennong.audio import Audio
+
+# this is here to prevent a circular dependency
+from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
+from shennong.postprocessor.cmvn import CmvnPostProcessor
 
 from app.settings import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
+with open("/code/processor-schema.json") as f:
+    config = loads(f.read())
 
-def resolve_processor(processor_name: str, settings: Dict[str, Any]):
-    if processor_name == "spectrogram":
-        return SpectrogramProcessor(**settings)
-    if processor_name == "filterbank":
-        return FilterbankProcessor(**settings)
-    if processor_name == "mfcc":
-        return MfccProcessor(**settings)
-    if processor_name == "plp":
-        return PlpProcessor(**settings)
-    if processor_name == "p_kaldi":
-        return KaldiPitchProcessor(**settings)
-    if processor_name == "p_crepe":
-        return CrepePitchProcessor(**settings)
-    if processor_name == "energy":
-        return EnergyProcessor(**settings)
+
+def resolve_processor(class_key: str, init_args: Dict[str, Any]):
+    class_name = config["processors"][class_key]["class_name"]
+    module = import_module(f"shennong.processor.{class_key}")
+    cls = module.__dict__[class_name]
+    return cls(**init_args)
 
 
 class CmvnWrapper:
@@ -53,23 +43,15 @@ class CmvnWrapper:
         return self.processor.process(features)
 
 
-def resolve_postprocessor(processor_name: str, features=None):
-    postprocessor = None
-    if processor_name == "delta":
-        postprocessor = DeltaPostProcessor()
-    if processor_name == "cmvn":
-        postprocessor = CmvnWrapper(features.ndims)
-    if processor_name == "vad":
-        postprocessor = VadPostProcessor()
-    if processor_name == "kaldi":
-        postprocessor = KaldiPitchPostProcessor()
-    if processor_name == "crepe":
-        postprocessor = CrepePitchPostProcessor()
-
-    if not postprocessor:
-        raise ValueError(f"{processor_name} is not defined!")
-
-    return postprocessor
+def resolve_postprocessor(class_key: str, features=None):
+    if class_key == "cmvn":
+        return CmvnWrapper(features.ndims)
+    class_name = config["postprocessors"][class_key]["class_name"]
+    try:
+        module = import_module(f"shennong.postprocessor.{class_key}")
+        return module.__dict__[class_name]()
+    except ImportError:
+        return resolve_processor(class_key, {})
 
 
 class Analyser:
@@ -99,23 +81,18 @@ class Analyser:
         )
         return postprocessor.process(self.collection[processor_type])
 
-    def process(self, processor_type: str, settings: Dict[str, Any]):
+    def process(self, key: str, settings: Dict[str, Any]):
         postprocessors = settings["postprocessors"] or []
         if settings["init_args"].get("sample_rate"):
             settings["init_args"]["sample_rate"] = self.sound.sample_rate
-        if processor_type == "p_kaldi":
-            postprocessors.append("kaldi")
-        if processor_type == "p_crepe":
-            settings = settings.copy()
-            postprocessors.append("crepe")
-        processor = resolve_processor(processor_type, settings["init_args"])
-        self.collection[processor_type] = processor.process(self.sound)
+        processor = resolve_processor(key, settings["init_args"])
+        self.collection[key] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
-                key = f"{processor_type}_{pp}"
-                logger.info(f"starting {key} postprocessor")
-                self.collection[key] = self.postprocess(pp, processor_type)
-                logger.info(f"finished {key} postprocessor")
+                pp_key = f"{key}_{pp}"
+                logger.info(f"starting {pp_key} postprocessor")
+                self.collection[pp_key] = self.postprocess(pp, key)
+                logger.info(f"finished {pp_key} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):

@@ -34,20 +34,16 @@ then: valid_processors:https://github.com/bootphon/shennong/blob/master/shennong
 """
 
 
-
 """ do we need this? When hydrating, we might actually not use the imported modules if we want to resolve by string, but instead import them dynamically 
 yup, shennong already does this: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L162
 also, they already have a list of processors and features that can just be piggy-backed on: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
+
+note that we actually don't need class_name if we're going to not resolve dynamically
 
 """
 processor_class_map = {
     "bottleneck": {
         "class_name": BottleneckProcessor,
-    },
-    "crepe_pitch": {
-        "class_name": CrepePitchProcessor,
-        # only arg is output of processor
-        "requred_postprocessors": ['crepe_pitch'],
     },
     "energy": {
         "class_name": EnergyProcessor,
@@ -55,12 +51,17 @@ processor_class_map = {
     "filterbank": {
         "class_name": FilterbankProcessor,
     },
-    "kaldi_pitch": {
-        "class_name": KaldiPitchProcessor,
-        "requred_postprocessors": ['kaldi_pitch'],
-    },
     "mfcc": {
         "class_name": MfccProcessor,
+    },
+    "pitch_crepe": {
+        "class_name": CrepePitchProcessor,
+        # only arg is output of processor
+        "required_postprocessors": ["pitch_crepe"],
+    },
+    "pitch_kaldi": {
+        "class_name": KaldiPitchProcessor,
+        "required_postprocessors": ["pitch_kaldi"],
     },
     "plp": {
         "class_name": PlpProcessor,
@@ -106,9 +107,9 @@ processor_options = {
 
 postprocessor_class_map = {
     "cmvn": CmvnPostProcessor,
-    "crepe_pitch": CrepePitchPostProcessor,
     "delta": DeltaPostProcessor,
-    "kaldi_pitch": KaldiPitchPostProcessor,
+    "pitch_crepe": CrepePitchPostProcessor,
+    "pitch_kaldi": KaldiPitchPostProcessor,
     "vad": VadPostProcessor,
 }
 
@@ -143,6 +144,7 @@ class Arg:
             "default": self.default,
             "required": True,
         }
+
         if hasattr(self, "options"):
             attrs["options"] = self.options
 
@@ -165,21 +167,17 @@ class Arg:
 @dataclass
 class ProcessorSpec:
     processor_class: FeaturesProcessor
-    class_key: str
     init_args: List[Arg] = field(default_factory=list)
     process_args: List[Arg] = field(default_factory=list)
     required_postprocessors: List[str] = field(default_factory=list)
 
     def toschema(self):
-        return (
-            {
-                "class_key": self.class_key,
+        return {
                 "class_name": self.processor_class.__name__,
                 "init_args": [a.toschema() for a in self.init_args],
                 "process_args": [a.toschema() for a in self.process_args],
                 "required_postprocessors": [s for s in self.required_postprocessors],
-            },
-        )
+            }
 
 
 @dataclass
@@ -192,10 +190,16 @@ class PostProcessorSpec:
 """ factory function for building a processor spec """
 
 
-def build_processor_spec(class_key: str, Processor: FeaturesProcessor):
+def build_processor_spec(
+    class_key: str,
+    Processor: FeaturesProcessor,
+    _required_postprocessors: List[str] = None,
+):
+    required_postprocessors = (
+        _required_postprocessors if _required_postprocessors else []
+    )
     processor = ProcessorSpec(
-        class_key=class_key,
-        processor_class=Processor,
+        processor_class=Processor, required_postprocessors=required_postprocessors
     )
 
     # todo: may be simpler to use native introspection:
@@ -224,8 +228,8 @@ def build_processor_spec(class_key: str, Processor: FeaturesProcessor):
 spec_skel = {
     "title": "Shennong processor and postprocessor classes",
     "description": "This schema is intended as a blueprint for **generating** forms, validators, and instances. It should not be used to validate a document.",
-    "processors": [],
-    "postprocessors": [],
+    "processors": {},
+    "postprocessors": {},
 }
 
 
@@ -233,12 +237,14 @@ def build_schema():
     """Reading classes from class_map, dynamically build the schema using instrospection"""
     schema = spec_skel.copy()
     for k, v in processor_class_map.items():
-        processor = build_processor_spec(k, v["class_name"])
-        schema["processors"].extend(processor.toschema())
+        processor = build_processor_spec(
+            k, v["class_name"], v.get("required_postprocessors")
+        )
+        schema["processors"][k] = processor.toschema()
 
     for k, v in postprocessor_class_map.items():
         processor = build_processor_spec(k, v)
-        schema["postprocessors"].extend(processor.toschema())
+        schema["postprocessors"][k] = processor.toschema()
 
     return schema
 
@@ -249,8 +255,9 @@ def save_schema(save_path: str):
     with open(save_path, "w") as f:
         f.write(dumps(schema))
 
+
 if __name__ == "__main__":
     from sys import argv
+
     save_path = argv[1]
     save_schema(save_path)
-

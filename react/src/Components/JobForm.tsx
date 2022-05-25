@@ -341,6 +341,14 @@ export const postProcessorDisplayFields: FieldDisplaySchema = {
         ],
         label: 'CMVN',
     },
+    pitch_crepe: {
+        component: 'checkbox',
+        label: 'Crepe Pitch Postprocessor',
+    },
+    pitch_kaldi: {
+        component: 'checkbox',
+        label: 'Kaldi Pitch Postprocessor',
+    },
     vad: {
         component: 'checkbox',
         helpLinks: [
@@ -433,6 +441,10 @@ export const globalDisplayFields: FormItem[] = [
 ];
 
 export const analysisDisplayFields: FieldDisplaySchema = {
+    bottleneck: {
+        component: 'checkbox',
+        label: 'Bottleneck',
+    },
     energy: {
         component: 'checkbox',
         label: 'Energy',
@@ -445,11 +457,11 @@ export const analysisDisplayFields: FieldDisplaySchema = {
         component: 'checkbox',
         label: 'MFCC',
     },
-    p_crepe: {
+    pitch_crepe: {
         component: 'checkbox',
         label: 'Pitch Estimation (Crepe)',
     },
-    p_kaldi: {
+    pitch_kaldi: {
         component: 'checkbox',
         label: 'Pitch Estimation (Kaldi)',
     },

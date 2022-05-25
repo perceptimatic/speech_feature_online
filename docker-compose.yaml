@@ -59,7 +59,7 @@ services:
       - UPLOAD_DIR
       - WORKER_CONCURRENCY
       - WORKER_DEBUG
-    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "warning", "-Q", "${PROCESSING_QUEUE}" ]
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:
       - ./uploads:${UPLOAD_DIR}
       - ./worker:/code
