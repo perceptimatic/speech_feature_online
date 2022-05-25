@@ -7,6 +7,7 @@ ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 ARG UPLOAD_DIR=/srv/uploads
 
+
 # create a sudo user, useful when developing from within a contaienr
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \

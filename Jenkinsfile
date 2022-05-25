@@ -10,7 +10,7 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Test, Build, Push, and Restart API') {
+        stage('Test, Build, and Push API') {
             when { changeset 'api/**/*' }
             steps {
                 dir('api') {
@@ -33,7 +33,7 @@ pipeline {
             }
         }
 
-        stage('Test, Build, Push, and Restart Worker') {
+        stage('Test, Build, and Push Worker') {
             when { changeset 'worker/**/*' }
             steps {
                 dir('worker') {
@@ -48,15 +48,10 @@ pipeline {
                             sh "docker tag sfo-worker:dev ghcr.io/${OWNER}/sfo-worker:latest"
                             sh "docker push ghcr.io/${OWNER}/sfo-worker:latest"
                         }
-                        withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
-                                             keyFileVariable: 'SSHKEY')]) {
-                            sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh worker" '
-                                             }
                     }
                 }
             }
         }
-
         stage('Build React App') {
             when { changeset 'react/**/*' }
             agent {
@@ -80,20 +75,34 @@ pipeline {
                 }
             }
         }
-        stage('Deploy React App') {
+        stage('Deploy React') {
             when { changeset 'react/**/*' }
             agent any
             steps {
-                    withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
-                        keyFileVariable: 'SSHKEY')]) {
-                            sh 'rsync -avh -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" ./react/dist jenkins@$HOST:$HOST_PATH/react/'
-                        }
+                withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
+                    keyFileVariable: 'SSHKEY')]) {
+                        sh 'rsync -avh -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" ./react/dist jenkins@$HOST:$HOST_PATH/react/'
+                    }
             }
         }
-        stage('Prune stale and ephemeral objects') {
+        stage('Deploy API') {
+            when { changeset 'api/**/*' }
+            agent any
             steps {
-                sh 'docker image prune -af'
-                sh 'docker container prune -f'
+                withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
+                    keyFileVariable: 'SSHKEY')]) {
+                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh api" '
+                    }
+            }
+        }
+        stage('Deploy worker') {
+            when { changeset 'worker/**/*' }
+            agent any
+            steps {
+                withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
+                    keyFileVariable: 'SSHKEY')]) {
+                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh worker" '
+                    }
             }
         }
     }
