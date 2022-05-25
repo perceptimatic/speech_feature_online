@@ -134,10 +134,12 @@ const resolveInputComponent = (config: FormItem) => {
 
 export default function JobFormField<K extends boolean | string | number>({
     config,
+    disabled,
     update,
     value,
 }: {
     config: FormItem;
+    disabled?: boolean;
     update: (val: any) => void;
     value: K;
 }) {
@@ -148,6 +150,7 @@ export default function JobFormField<K extends boolean | string | number>({
             return (
                 <FormControlLabel
                     control={<Checkbox checked={!!value} />}
+                    disabled={disabled}
                     label={
                         <Label
                             labelText={config.label || config.name}
@@ -165,9 +168,8 @@ export default function JobFormField<K extends boolean | string | number>({
         case 'number':
             return (
                 <TextField
-                    sx={{ margin: 1, width: '200px' }}
+                    disabled={disabled}
                     key={config.name}
-                    type="number"
                     label={
                         <Label
                             labelText={config.label || config.name}
@@ -175,12 +177,14 @@ export default function JobFormField<K extends boolean | string | number>({
                         />
                     }
                     onChange={v => update(+v.currentTarget.value)}
+                    sx={{ margin: 1, width: '200px' }}
+                    type="number"
                     value={value}
                 />
             );
         case 'radio':
             return (
-                <FormControl key={config.name}>
+                <FormControl disabled={disabled} key={config.name}>
                     <FormLabel
                         sx={{
                             marginRight: 1,
@@ -212,21 +216,23 @@ export default function JobFormField<K extends boolean | string | number>({
 
 interface ProcessingGroupProps {
     add: (k: string) => void;
+    initArgsConfig: FormItem[];
     postProcessors: FormItem[];
     processorConfig: FormItem;
-    initArgsConfig: FormItem[];
-    state: JobConfig;
     remove: (k: string) => void;
+    requiredPostprocessors: string[];
+    state: JobConfig;
     update: (processorName: string, slice: Partial<AnalysisConfig>) => void;
 }
 
-/* This takes a single Processing field schema and returns the display unit */
+/* This takes a single Processing field schema and returns the form fields */
 export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
     add,
     initArgsConfig,
     postProcessors,
     processorConfig,
     remove,
+    requiredPostprocessors,
     state,
     update,
 }) => {
@@ -266,11 +272,11 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                         <Grid item key={f.name}>
                             <JobFormField
                                 config={f}
+                                update={val => updateInitArgs(f.name, val)}
                                 value={
                                     existingValues.init_args[f.name] ??
                                     f.default
                                 }
-                                update={val => updateInitArgs(f.name, val)}
                             />
                         </Grid>
                     ))}
@@ -282,13 +288,11 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                         </Typography>
                         {postProcessors.map(f => (
                             <JobFormField
-                                key={f.name}
                                 config={f}
-                                value={
-                                    !!(
-                                        existingValues.postprocessors || []
-                                    ).find(p => p === f.name)
-                                }
+                                disabled={requiredPostprocessors.includes(
+                                    f.name
+                                )}
+                                key={f.name}
                                 update={(val: boolean) => {
                                     const newVal = val
                                         ? [f.name].concat(
@@ -301,6 +305,11 @@ export const ProcessingGroup: React.FC<ProcessingGroupProps> = ({
                                           ).filter(d => d !== f.name);
                                     updatePostProcessors(newVal);
                                 }}
+                                value={
+                                    !!(
+                                        existingValues.postprocessors || []
+                                    ).find(p => p === f.name)
+                                }
                             />
                         ))}
                     </Grid>

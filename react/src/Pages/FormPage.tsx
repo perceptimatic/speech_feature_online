@@ -80,6 +80,7 @@ const FormPage: React.FC = () => {
                     ...argumentDisplayFields[g.name],
                     ...g,
                 })),
+                required_postprocessors: g.required_postprocessors,
             }));
             setSchema(fg);
             setPostProcessors(
@@ -490,17 +491,20 @@ const FormPage: React.FC = () => {
                                             schema.map(config => (
                                                 <ProcessingGroup
                                                     add={addAnalysis}
-                                                    postProcessors={
-                                                        postprocessors
-                                                    }
                                                     initArgsConfig={
                                                         config.init_args
                                                     }
                                                     key={config.analysis.name}
+                                                    postProcessors={
+                                                        postprocessors
+                                                    }
                                                     processorConfig={
                                                         config.analysis
                                                     }
                                                     remove={removeAnalysis}
+                                                    requiredPostprocessors={
+                                                        config.required_postprocessors
+                                                    }
                                                     state={state}
                                                     update={updateAnalysis}
                                                 />

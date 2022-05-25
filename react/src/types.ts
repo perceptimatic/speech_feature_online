@@ -21,11 +21,33 @@ export interface AnalysisConfig {
 export interface AnalysisFormGroup {
     analysis: FormItem;
     init_args: FormItem[];
+    required_postprocessors: string[];
 }
 
 export interface FormItem extends ProcessorFieldSchema, FieldDisplayItem {}
 
+export interface FieldDisplayItem {
+    component: 'checkbox' | 'text' | 'radio' | 'number';
+    helpLinks?: { label: string; href: string }[];
+    label?: string | JSX.Element;
+}
+
+export type FieldDisplaySchema = Record<string, FieldDisplayItem>;
+
 /* For JSON schema */
+export interface CommonSchema {
+    title: string;
+    description: string;
+    processors: ProcessorSchema[];
+    postprocessors: PostprocessorSchema[];
+}
+
+export interface PostprocessorSchema {
+    class_key: string;
+    class_name: string;
+    init_args: ProcessorFieldSchema[];
+}
+
 export interface ProcessorFieldSchema {
     name: string;
     type: 'string' | 'integer' | 'number' | 'boolean';
@@ -34,23 +56,6 @@ export interface ProcessorFieldSchema {
     options?: string[];
 }
 
-export type FieldDisplaySchema = Record<string, FieldDisplayItem>;
-
-export interface FieldDisplayItem {
-    component: 'checkbox' | 'text' | 'radio' | 'number';
-    helpLinks?: { label: string; href: string }[];
-    label?: string | JSX.Element;
-}
-
-export interface CommonSchema {
-    title: string;
-    description: string;
-    processors: ProcessorSchema[];
-    postprocessors: ProcessorSchema[];
-}
-
-export interface ProcessorSchema {
-    class_key: string;
-    class_name: string;
-    init_args: ProcessorFieldSchema[];
+export interface ProcessorSchema extends PostprocessorSchema {
+    required_postprocessors: string[];
 }

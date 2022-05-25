@@ -151,6 +151,14 @@ def _validate_analyses(request: dict, schema: dict):
                         f"{key} processor field `{arg['name']}` must be of type {arg['type']}",
                     )
                 )
+        for pp in processor_schema["required_postprocessors"]:
+            if pp not in analysis["postprocessors"]:
+                violations.append(
+                    ValidationViolation(
+                        pp,
+                        f"{analysis} processor requires postprocessor `{pp}`",
+                    )
+                )
 
     if violations:
         raise_422(violations)

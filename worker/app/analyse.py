@@ -7,53 +7,39 @@ import uuid
 from zipfile import ZipFile
 
 import boto3
-
-from shennong import FeaturesCollection
 from shennong.audio import Audio
-from shennong.processor.bottleneck import BottleneckProcessor
-from shennong.processor.energy import EnergyProcessor
+from shennong.processor.spectrogram import SpectrogramProcessor
 from shennong.processor.filterbank import FilterbankProcessor
 from shennong.processor.mfcc import MfccProcessor
-from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
-from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
 from shennong.processor.plp import PlpProcessor
-from shennong.processor.spectrogram import SpectrogramProcessor
-from shennong.processor.ubm import DiagUbmProcessor
-from shennong.processor.vtln import VtlnProcessor
+from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
+from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
+from shennong.processor.energy import EnergyProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.vad import VadPostProcessor
-
+from shennong import FeaturesCollection
 
 from app.settings import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
 
-def resolve_processor(processor_name: str, init_args: Dict[str, Any]):
-
-    if processor_name == "bottleneck":
-        return BottleneckProcessor(**init_args)
-    if processor_name == "energy":
-        return EnergyProcessor(**init_args)
-    if processor_name == "crepe":
-        return CrepePitchProcessor(**init_args)
-    if processor_name == "filterbank":
-        return FilterbankProcessor(**init_args)
-    if processor_name == "kaldi_pitch":
-        return KaldiPitchProcessor(**init_args)
-    if processor_name == "mfcc":
-        return MfccProcessor(**init_args)
-    if processor_name == "plp":
-        return PlpProcessor(**init_args)
+def resolve_processor(processor_name: str, settings: Dict[str, Any]):
     if processor_name == "spectrogram":
-        return SpectrogramProcessor(**init_args)
-    if processor_name == "ubm":
-        return DiagUbmProcessor(**init_args)
-    if processor_name == "vtln":
-        return VtlnProcessor(**init_args)
-
-    raise ValueError(f"unknown processor: {processor_name}")
+        return SpectrogramProcessor(**settings)
+    if processor_name == "filterbank":
+        return FilterbankProcessor(**settings)
+    if processor_name == "mfcc":
+        return MfccProcessor(**settings)
+    if processor_name == "plp":
+        return PlpProcessor(**settings)
+    if processor_name == "p_kaldi":
+        return KaldiPitchProcessor(**settings)
+    if processor_name == "p_crepe":
+        return CrepePitchProcessor(**settings)
+    if processor_name == "energy":
+        return EnergyProcessor(**settings)
 
 
 class CmvnWrapper:
@@ -114,20 +100,22 @@ class Analyser:
         return postprocessor.process(self.collection[processor_type])
 
     def process(self, processor_type: str, settings: Dict[str, Any]):
-        postprocessors = settings.pop("postprocessors") or []
-        settings["sample_rate"] = self.sound.sample_rate
+        postprocessors = settings["postprocessors"] or []
+        if settings["init_args"].get("sample_rate"):
+            settings["init_args"]["sample_rate"] = self.sound.sample_rate
         if processor_type == "p_kaldi":
             postprocessors.append("kaldi")
         if processor_type == "p_crepe":
             settings = settings.copy()
-            settings.pop("sample_rate")
             postprocessors.append("crepe")
         processor = resolve_processor(processor_type, settings["init_args"])
         self.collection[processor_type] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
                 key = f"{processor_type}_{pp}"
+                logger.info(f"starting {key} postprocessor")
                 self.collection[key] = self.postprocess(pp, processor_type)
+                logger.info(f"finished {key} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):
@@ -177,8 +165,8 @@ class LocalFileManager(AbstractContextManager):
 
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
-        for pth in [*self.result_dirs, *self.input_paths]:
-            dirpath = path.dirname(pth) if path.isfile(pth) else pth
+        for filepath in [*self.result_dirs, *self.input_paths]:
+            dirpath = path.dirname(filepath) if path.isfile(filepath) else filepath
             with scandir(dirpath) as it:
                 for entry in it:
                     try:
@@ -264,7 +252,7 @@ class S3FileManager(LocalFileManager):
 
 
 def process_data(
-    file_paths: str, settings: Dict[str, Dict], res_type: str, channel: int
+    file_paths: str, analysis_settings: Dict[str, Dict], res_type: str, channel: int
 ) -> str:
     """Process each file passed for analysis"""
 
@@ -278,10 +266,13 @@ def process_data(
             collection = FeaturesCollection()
             local_path = manager.load(file_path)
             analyser = Analyser(local_path, channel, collection)
+            logger.info(f"starting {file_path}")
 
-            for k, v in settings.items():
+            for k, v in analysis_settings.items():
+                logger.info(f"starting {k}")
                 analyser.process(k, v)
-            """ Note that csv serializers save a csv and a json file,
+                logger.info(f"finished {k}")
+            """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
                 https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
             """
@@ -293,6 +284,7 @@ def process_data(
                 serializer = None
                 outpath = manager.register_result_path(local_path, res_type)
             analyser.collection.save(outpath, serializer=serializer)
+            logger.info(f"saved {file_path}")
 
         # storeManager has kept track of temp result paths
         url = manager.store()

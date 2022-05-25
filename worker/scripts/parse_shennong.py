@@ -31,9 +31,9 @@ valid_features: ['spectrogram', 'filterbank', 'mfcc', 'plp', 'bottleneck']
 https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L20
 
 then: valid_processors:https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
-
-
 """
+
+
 
 """ do we need this? When hydrating, we might actually not use the imported modules if we want to resolve by string, but instead import them dynamically 
 yup, shennong already does this: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L162
@@ -47,7 +47,7 @@ processor_class_map = {
     "crepe_pitch": {
         "class_name": CrepePitchProcessor,
         # only arg is output of processor
-        "requred_postprocessors": [CrepePitchPostProcessor],
+        "requred_postprocessors": ['crepe_pitch'],
     },
     "energy": {
         "class_name": EnergyProcessor,
@@ -57,7 +57,7 @@ processor_class_map = {
     },
     "kaldi_pitch": {
         "class_name": KaldiPitchProcessor,
-        "requred_postprocessors": [CrepePitchPostProcessor],
+        "requred_postprocessors": ['kaldi_pitch'],
     },
     "mfcc": {
         "class_name": MfccProcessor,
@@ -243,8 +243,14 @@ def build_schema():
     return schema
 
 
-def save_schema(pth: str):
+def save_schema(save_path: str):
     """main function; build and save schema"""
     schema = build_schema()
-    with open(pth, "w") as f:
+    with open(save_path, "w") as f:
         f.write(dumps(schema))
+
+if __name__ == "__main__":
+    from sys import argv
+    save_path = argv[1]
+    save_schema(save_path)
+
