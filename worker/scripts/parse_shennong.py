@@ -5,7 +5,7 @@ from sys import path as syspath
 from typing import List, Type, Union
 
 # make sure the app module in in the python path
-syspath.insert(0, ".")
+syspath.insert(0, "../app.py")
 
 
 from shennong.processor.base import FeaturesProcessor
@@ -25,17 +25,59 @@ from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.vad import VadPostProcessor
 
+""" Note that there's a difference between processors and features
+shennong's internal pipeline manager divides them this way:
+valid_features: ['spectrogram', 'filterbank', 'mfcc', 'plp', 'bottleneck']
+https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L20
+
+then: valid_processors:https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
+
+
+"""
+
+""" do we need this? When hydrating, we might actually not use the imported modules if we want to resolve by string, but instead import them dynamically 
+yup, shennong already does this: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L162
+also, they already have a list of processors and features that can just be piggy-backed on: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
+
+"""
 processor_class_map = {
-    "bottleneck": BottleneckProcessor,
-    "crepe": CrepePitchProcessor,
-    "energy": EnergyProcessor,
-    "filterbank": FilterbankProcessor,
-    "kaldi_pitch": KaldiPitchProcessor,
-    "mfcc": MfccProcessor,
-    "plp": PlpProcessor,
-    "spectrogram": SpectrogramProcessor,
-    "ubm": DiagUbmProcessor,
-    "vtln": VtlnProcessor,
+    "bottleneck": {
+        "class_name": BottleneckProcessor,
+    },
+    "crepe_pitch": {
+        "class_name": CrepePitchProcessor,
+        # only arg is output of processor
+        "requred_postprocessors": [CrepePitchPostProcessor],
+    },
+    "energy": {
+        "class_name": EnergyProcessor,
+    },
+    "filterbank": {
+        "class_name": FilterbankProcessor,
+    },
+    "kaldi_pitch": {
+        "class_name": KaldiPitchProcessor,
+        "requred_postprocessors": [CrepePitchPostProcessor],
+    },
+    "mfcc": {
+        "class_name": MfccProcessor,
+    },
+    "plp": {
+        "class_name": PlpProcessor,
+    },
+    "spectrogram": {
+        "class_name": SpectrogramProcessor,
+    },
+    # note that this is also a preprocessor for vtln and the `process` method requires an `utterances` arg that I'm not sure we can so easily pass in
+    # https://github.com/bootphon/shennong/blob/master/shennong/processor/ubm.py
+    # "ubm": {
+    #     "class_name": DiagUbmProcessor,
+    # },
+    # same as above, requires `utterances`
+    # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py
+    # "vtln": {
+    #     "class_name": VtlnProcessor,
+    # },
 }
 
 window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
@@ -64,7 +106,9 @@ processor_options = {
 
 postprocessor_class_map = {
     "cmvn": CmvnPostProcessor,
+    "crepe_pitch": CrepePitchPostProcessor,
     "delta": DeltaPostProcessor,
+    "kaldi_pitch": KaldiPitchPostProcessor,
     "vad": VadPostProcessor,
 }
 
@@ -186,9 +230,10 @@ spec_skel = {
 
 
 def build_schema():
+    """Reading classes from class_map, dynamically build the schema using instrospection"""
     schema = spec_skel.copy()
     for k, v in processor_class_map.items():
-        processor = build_processor_spec(k, v)
+        processor = build_processor_spec(k, v["class_name"])
         schema["processors"].extend(processor.toschema())
 
     for k, v in postprocessor_class_map.items():
@@ -199,6 +244,7 @@ def build_schema():
 
 
 def save_schema(pth: str):
+    """main function; build and save schema"""
     schema = build_schema()
     with open(pth, "w") as f:
         f.write(dumps(schema))
