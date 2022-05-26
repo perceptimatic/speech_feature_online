@@ -18,7 +18,11 @@ from app.validators import validate_job_request
 app = FastAPI()
 
 logger = logging.getLogger(__name__)
-app.mount("/static", StaticFiles(directory="/code/static/"), name="static")
+app.mount(
+    "/static",
+    StaticFiles(directory=path.join(settings.PROJECT_ROOT, "static")),
+    name="static",
+)
 celery_app = Celery("speech_features", broker="redis://redis:6379/0")
 
 celery_app.conf.task_routes = {

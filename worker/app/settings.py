@@ -1,4 +1,4 @@
-from os import getenv
+from os import getenv, path
 
 
 class Settings:
@@ -7,6 +7,7 @@ class Settings:
     BUCKET_NAME: str = getenv("BUCKET_NAME")
     POSTGRES_CONNECTION_STRING: str = f"postgresql://{getenv('POSTGRES_USER')}:{getenv('POSTGRES_PASSWORD')}@postgres/{getenv('POSTGRES_DB')}"
     PROCESSING_QUEUE: str = getenv("PROCESSING_QUEUE")
+    PROJECT_ROOT:str = path.abspath(path.join(path.dirname(__file__),'..'))
     STORAGE_DRIVER: str = getenv("STORAGE_DRIVER")
     SENDER_EMAIL: str = getenv("SENDER_EMAIL")
     SMTP_HOST: str = getenv("SMTP_HOST")

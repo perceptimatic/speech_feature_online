@@ -12,7 +12,6 @@ import boto3
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio
-
 # this is here to prevent a circular dependency
 from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
@@ -21,7 +20,7 @@ from app.settings import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
-with open("/code/processor-schema.json") as f:
+with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
     config = loads(f.read())
 
 

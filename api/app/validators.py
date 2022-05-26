@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from json import dumps, loads
+from os import path
 from typing import Any, List
 
 from pydantic import EmailStr
@@ -24,7 +25,11 @@ def raise_422(messages: List[ValidationViolation]):
 
 def validate_job_request(request: dict):
     """wrapper that injects the schema, handy for testing"""
-    with open("/code/static/processor-schema.json", mode="r", encoding="UTF-8") as f:
+    with open(
+        path.join(settings.PROJECT_ROOT, "static/processor-schema.json"),
+        mode="r",
+        encoding="UTF-8",
+    ) as f:
         schema = loads(f.read())
     _validate_top_level_fields(request)
     return _validate_analyses(request, schema)
