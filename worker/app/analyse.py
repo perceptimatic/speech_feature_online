@@ -65,11 +65,7 @@ class Analyser:
         collection: FeaturesCollection,
     ):
         self.collection = collection
-        self.filepath = filepath
-
-        if not self.filepath:
-            raise ValueError("File path not set!")
-        sound = Audio.load(self.filepath)
+        sound = Audio.load(filepath)
         if (
             sound.nchannels > 1
         ):  # converting to mono; user-set or default channel chosen:

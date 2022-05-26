@@ -49,7 +49,6 @@ import {
     AnalysisConfig,
     AnalysisFormGroup,
     CommonSchema,
-    FormItem,
     JobConfig,
 } from '../types';
 
@@ -57,7 +56,6 @@ const FormPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [failedFiles, setFailedFiles] = useState<File[]>([]);
     const [invalidFields, setInvalidFields] = useState<string[]>();
-    const [postprocessors, setPostProcessors] = useState<FormItem[]>();
     const [progress, setProgress] = useState<ProgressIncrement>();
     const [schema, setSchema] = useState<AnalysisFormGroup[]>();
     const [state, dispatch] = useFormReducer();
@@ -82,20 +80,18 @@ const FormPage: React.FC = () => {
                         ...argumentDisplayFields[iArg.name],
                         ...iArg,
                     })),
+                    postprocessors: v.valid_postprocessors.map(k => ({
+                        ...postProcessorDisplayFields[k],
+                        component: 'checkbox',
+                        default: false,
+                        name: k,
+                        required: false,
+                        type: 'boolean',
+                    })),
                     required_postprocessors: v.required_postprocessors,
                 })
             );
             setSchema(fg);
-            setPostProcessors(
-                getKeys(schema.postprocessors).map(k => ({
-                    ...postProcessorDisplayFields[k],
-                    component: 'checkbox',
-                    default: false,
-                    name: k,
-                    required: false,
-                    type: 'boolean',
-                }))
-            );
         };
 
         cb();
@@ -495,7 +491,6 @@ const FormPage: React.FC = () => {
                                         direction="column"
                                     >
                                         {schema &&
-                                            postprocessors &&
                                             schema.map(config => (
                                                 <ProcessingGroup
                                                     add={addAnalysis}
@@ -504,7 +499,7 @@ const FormPage: React.FC = () => {
                                                     }
                                                     key={config.analysis.name}
                                                     postProcessors={
-                                                        postprocessors
+                                                        config.postprocessors
                                                     }
                                                     processorConfig={
                                                         config.analysis

@@ -21,6 +21,7 @@ export interface AnalysisConfig {
 export interface AnalysisFormGroup {
     analysis: FormItem;
     init_args: FormItem[];
+    postprocessors: FormItem[];
     required_postprocessors: string[];
 }
 
@@ -57,4 +58,5 @@ export interface ProcessorFieldSchema {
 
 export interface ProcessorSchema extends PostprocessorSchema {
     required_postprocessors: string[];
+    valid_postprocessors: string[];
 }

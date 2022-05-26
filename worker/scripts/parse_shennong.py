@@ -33,40 +33,40 @@ https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L2
 then: valid_processors:https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
 """
 
-
-""" do we need this? When hydrating, we might actually not use the imported modules if we want to resolve by string, but instead import them dynamically 
-yup, shennong already does this: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L162
-also, they already have a list of processors and features that can just be piggy-backed on: https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
-
-note that we actually don't need class_name if we're going to not resolve dynamically
-
-"""
 processor_class_map = {
     "bottleneck": {
         "class_name": BottleneckProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "energy": {
         "class_name": EnergyProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "filterbank": {
         "class_name": FilterbankProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "mfcc": {
         "class_name": MfccProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "pitch_crepe": {
         "class_name": CrepePitchProcessor,
         # only arg is output of processor
+        "valid_postprocessors": ["cmvn", "delta", "pitch_crepe", "vad"],
         "required_postprocessors": ["pitch_crepe"],
     },
     "pitch_kaldi": {
         "class_name": KaldiPitchProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "pitch_kaldi", "vad"],
         "required_postprocessors": ["pitch_kaldi"],
     },
     "plp": {
         "class_name": PlpProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "spectrogram": {
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
         "class_name": SpectrogramProcessor,
     },
     # note that this is also a preprocessor for vtln and the `process` method requires an `utterances` arg that I'm not sure we can so easily pass in
@@ -75,7 +75,10 @@ processor_class_map = {
     #     "class_name": DiagUbmProcessor,
     # },
     # same as above, requires `utterances`
-    # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py
+    # seems like a postprocessor? 
+    # note that it is not compatible with spectrogramp and bottleneck processors:
+    # https://github.com/bootphon/shennong/blob/master/shennong/pipeline.py#L134
+    # class: https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py
     # "vtln": {
     #     "class_name": VtlnProcessor,
     # },
@@ -170,14 +173,16 @@ class ProcessorSpec:
     init_args: List[Arg] = field(default_factory=list)
     process_args: List[Arg] = field(default_factory=list)
     required_postprocessors: List[str] = field(default_factory=list)
+    valid_postprocessors: List[str] = field(default_factory=list)
 
     def toschema(self):
         return {
-                "class_name": self.processor_class.__name__,
-                "init_args": [a.toschema() for a in self.init_args],
-                "process_args": [a.toschema() for a in self.process_args],
-                "required_postprocessors": [s for s in self.required_postprocessors],
-            }
+            "class_name": self.processor_class.__name__,
+            "init_args": [a.toschema() for a in self.init_args],
+            "process_args": [a.toschema() for a in self.process_args],
+            "required_postprocessors": self.required_postprocessors,
+            "valid_postprocessors": self.valid_postprocessors,
+        }
 
 
 @dataclass
@@ -193,13 +198,19 @@ class PostProcessorSpec:
 def build_processor_spec(
     class_key: str,
     Processor: FeaturesProcessor,
+    _valid_postprocessors: List[str] = None,
     _required_postprocessors: List[str] = None,
 ):
     required_postprocessors = (
         _required_postprocessors if _required_postprocessors else []
     )
+
+    valid_postprocessors = _valid_postprocessors if _valid_postprocessors else []
+
     processor = ProcessorSpec(
-        processor_class=Processor, required_postprocessors=required_postprocessors
+        processor_class=Processor,
+        required_postprocessors=required_postprocessors,
+        valid_postprocessors=valid_postprocessors,
     )
 
     # todo: may be simpler to use native introspection:
@@ -238,7 +249,10 @@ def build_schema():
     schema = spec_skel.copy()
     for k, v in processor_class_map.items():
         processor = build_processor_spec(
-            k, v["class_name"], v.get("required_postprocessors")
+            k,
+            v["class_name"],
+            v["valid_postprocessors"],
+            v.get("required_postprocessors"),
         )
         schema["processors"][k] = processor.toschema()
 
