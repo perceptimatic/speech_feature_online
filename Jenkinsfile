@@ -8,6 +8,9 @@ pipeline {
         stage('Clone repository') {
             steps {
                 checkout scm
+                script {
+                    sh './build-schema.sh'
+                }
             }
         }
         stage('Test, Build, and Push API') {
