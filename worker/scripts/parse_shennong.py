@@ -4,6 +4,8 @@ from json import dumps
 from sys import path as syspath
 from typing import List, Type, Union
 
+from joblib import Parallel, delayed
+
 # make sure the app module in in the python path
 syspath.insert(0, "../app.py")
 
@@ -75,7 +77,7 @@ processor_class_map = {
     #     "class_name": DiagUbmProcessor,
     # },
     # same as above, requires `utterances`
-    # seems like a postprocessor? 
+    # seems like a postprocessor?
     # note that it is not compatible with spectrogramp and bottleneck processors:
     # https://github.com/bootphon/shennong/blob/master/shennong/pipeline.py#L134
     # class: https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py

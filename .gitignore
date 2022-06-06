@@ -25,3 +25,7 @@ benchmarks.md
 
 processor-schema.json
 !/**/.gitkeep
+
+
+worker/app/tests/fixtures
+!/worker/app/tests/fixtures/brief-sample-audio

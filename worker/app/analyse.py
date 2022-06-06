@@ -8,10 +8,11 @@ from typing import Any, Dict
 import uuid
 from zipfile import ZipFile
 
-import boto3
+# import boto3
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio
+
 # this is here to prevent a circular dependency
 from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
@@ -263,3 +264,28 @@ def process_data(
         url = manager.store()
 
     return url
+
+
+if __name__ == "__main__":
+    # hmmm this does NOT fix things, as in, still using all the processors...
+    from sys import argv
+    from joblib import Parallel, delayed
+    from shennong.processor.bottleneck import BottleneckProcessor
+
+    use_job_lib = False
+
+    try:
+        if argv[1] == "-p":
+            use_job_lib = True
+    except Exception:
+        pass
+
+    audio = Audio.load("/code/app/tests/fixtures/long-mono.wav")
+    p = BottleneckProcessor()
+
+    if use_job_lib:
+        Parallel(n_jobs=16, verbose=True, prefer="threads")(
+            delayed(p.process)(audio) for i in [1]
+        )
+    else:
+        r = p.process(audio)

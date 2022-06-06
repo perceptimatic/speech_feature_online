@@ -5,10 +5,10 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from app.analyse import process_data
 from app.celery_app import celery_app
-from app.email.smtp_service import SMTPService
+from app.emails.smtp_service import SMTPService
 
 jinja_env = Environment(
-    loader=PackageLoader("app.email"), autoescape=select_autoescape()
+    loader=PackageLoader("app.emails"), autoescape=select_autoescape()
 )
 
 
