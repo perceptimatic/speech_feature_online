@@ -103,15 +103,16 @@ services:
   postgres:
     image: postgres:latest
     volumes:
-      - ./postgres/data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
       - POSTGRES_USER
       - POSTGRES_ROOT_PASSWORD
-    user: ${UIDGID:-root:root}
     networks:
       - speech-feature
 networks:
   speech-feature:
+volumes:
+  db-data:

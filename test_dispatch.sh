@@ -2,8 +2,10 @@
 
 # Simple convenience script to dispatch one or more test jobs to the queue.
 # Arguments are path to JSON config and path to audio file: both will be mounted into the worker container.
-# Assumes all services are running.
-# Example: bash test_dispatch.sh ~/test/config.json ~/recordings/my-recording.mp3 --dev
+# Assumes all services are running, though if we're using the local filesystem
+# care should be taken to ensure that an already-online worker doesn't pick up the job, since the files
+# won't be mounted to the already-running container.
+# Example: bash test_dispatch.sh ~/test/config.json ~/recordings/my-recording.mp3
 
 set -euo pipefail
 

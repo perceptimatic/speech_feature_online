@@ -1,76 +1,62 @@
-export interface BaseJobConfig {
-    channel: number;
+/* for form state */
+
+export interface GlobalJobConfig {
+    channel: string;
     email: string;
     files: string[];
     res: string;
 }
 
-export type Postprocessor = 'cmvn' | 'vad' | 'delta';
-
-interface BaseAnalysisConfigProps {
-    frame_shift: number;
-    frame_length: number;
-    postprocessors: Postprocessor[];
+export interface JobConfig extends GlobalJobConfig {
+    analyses: Record<string, AnalysisConfig>;
 }
 
-export interface StandardAnalysisConfigProps extends BaseAnalysisConfigProps {
-    window_type: string;
-    snip_edges: boolean;
+export interface AnalysisConfig {
+    init_args: Record<string, string | boolean | number>;
+    postprocessors: string[];
 }
 
-export interface PKaldiAnalysisConfigProps extends BaseAnalysisConfigProps {
-    min_f0: number;
-    max_f0: number;
+/* for field display */
+
+export interface AnalysisFormGroup {
+    analysis: FormItem;
+    init_args: FormItem[];
+    postprocessors: FormItem[];
+    required_postprocessors: string[];
 }
 
-export interface PCrepeAnalysisConfigProps extends BaseAnalysisConfigProps {
-    model_capacity: string;
+export interface FormItem extends ProcessorFieldSchema, FieldDisplayItem {}
+
+export interface FieldDisplayItem {
+    component: 'checkbox' | 'text' | 'radio' | 'number';
+    helpLinks?: { label: string; href: string }[];
+    label?: string | JSX.Element;
 }
 
-//typeguards
+export type FieldDisplaySchema = Record<string, FieldDisplayItem>;
 
-export type CombinedAnalysisConfigFields = StandardAnalysisConfigProps &
-    PKaldiAnalysisConfigProps &
-    PCrepeAnalysisConfigProps;
+/* For JSON schema */
+export interface CommonSchema {
+    title: string;
+    description: string;
+    processors: Record<string, ProcessorSchema>;
+    postprocessors: Record<string, PostprocessorSchema>;
+}
 
-export const isPKaldiAnalysisConfigProps = (
-    config:
-        | StandardAnalysisConfigProps
-        | PKaldiAnalysisConfigProps
-        | PCrepeAnalysisConfigProps
-): config is PKaldiAnalysisConfigProps =>
-    !!(config as PKaldiAnalysisConfigProps).max_f0;
+export interface PostprocessorSchema {
+    class_name: string;
+    init_args: ProcessorFieldSchema[];
+}
 
-export const isPCrepeAnalysisConfigProps = (
-    config:
-        | StandardAnalysisConfigProps
-        | PCrepeAnalysisConfigProps
-        | PKaldiAnalysisConfigProps
-): config is PCrepeAnalysisConfigProps =>
-    !!(config as PCrepeAnalysisConfigProps).model_capacity;
+export interface ProcessorFieldSchema {
+    name: string;
+    type: 'string' | 'integer' | 'number' | 'boolean';
+    default: string | number | boolean;
+    required: boolean;
+    options?: string[];
+}
 
-type SpectrogramAnalysisConfig = Record<
-    'spectrogram',
-    StandardAnalysisConfigProps
->;
-type FilterBankAnalysisConfig = Record<
-    'filterbank',
-    StandardAnalysisConfigProps
->;
-type MFCCanalysisConfig = Record<'mfcc', StandardAnalysisConfigProps>;
-type PLPAnalysisConfig = Record<'plp', StandardAnalysisConfigProps>;
-type EnergyAnalysisConfig = Record<'energy', StandardAnalysisConfigProps>;
-type PKaldiAnalysisConfig = Record<'p_kaldi', PKaldiAnalysisConfigProps>;
-type PCrepeAnalysisConfig = Record<'p_crepe', PCrepeAnalysisConfigProps>;
-
-export type AnalysisConfig = SpectrogramAnalysisConfig &
-    FilterBankAnalysisConfig &
-    MFCCanalysisConfig &
-    PLPAnalysisConfig &
-    EnergyAnalysisConfig &
-    PKaldiAnalysisConfig &
-    PCrepeAnalysisConfig;
-
-export interface JobConfig extends BaseJobConfig {
-    analyses: { [K in keyof AnalysisConfig]?: AnalysisConfig[K] };
+export interface ProcessorSchema extends PostprocessorSchema {
+    required_postprocessors: string[];
+    valid_postprocessors: string[];
 }

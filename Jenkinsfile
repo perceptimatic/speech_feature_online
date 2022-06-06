@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent { label 'ec2-build-node' }
     environment {
         HOST_PATH = credentials('host-path')
         HOST = credentials('host')

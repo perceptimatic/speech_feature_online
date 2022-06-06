@@ -1,16 +1,11 @@
 import React from 'react';
 import { Box, Button, Grid, Typography } from '@mui/material';
 import Modal from './Modal';
-
-interface PydanticErrMsg {
-    loc: string[];
-    msg: string;
-    type: string;
-}
+import { getEntries } from './JobForm';
 
 interface SubmissionErrorModalProps {
     code?: number;
-    detail?: PydanticErrMsg[];
+    detail?: string;
     handleClose: () => void;
     open: boolean;
 }
@@ -41,9 +36,12 @@ const SubmissionErrorModal: React.FC<SubmissionErrorModalProps> = ({
 
             <Box sx={{ mt: 2 }}>
                 {code === 422 &&
-                    (detail || []).map(d => (
-                        <Typography key={d.msg}>{d.msg}</Typography>
-                    ))}
+                    detail &&
+                    getEntries<Record<string, string>>(JSON.parse(detail)).map(
+                        ([k, v]: [string, string]) => (
+                            <Typography key={k}>{v}</Typography>
+                        )
+                    )}
             </Box>
             <Grid container flexWrap="nowrap" direction="row">
                 <Grid item>

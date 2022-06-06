@@ -59,7 +59,7 @@ services:
   postgres:
     image: postgres:latest
     volumes:
-      - ./postgres/data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
@@ -68,7 +68,6 @@ services:
       - POSTGRES_ROOT_PASSWORD
     networks:
       - speech-feature
-    user: ${UIDGID}
   nginx:
     image: nginx:1.20
     environment:
@@ -90,3 +89,5 @@ services:
       - 443:443
 networks:
   speech-feature:
+volumes:
+  db-data:
