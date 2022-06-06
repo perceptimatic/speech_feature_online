@@ -27,13 +27,6 @@ from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.vad import VadPostProcessor
 
-""" Note that there's a difference between processors and features
-shennong's internal pipeline manager divides them this way:
-valid_features: ['spectrogram', 'filterbank', 'mfcc', 'plp', 'bottleneck']
-https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L20
-
-then: valid_processors:https://github.com/bootphon/shennong/blob/master/shennong/pipeline_manager.py#L24
-"""
 
 processor_class_map = {
     "bottleneck": {
@@ -71,19 +64,7 @@ processor_class_map = {
         "valid_postprocessors": ["cmvn", "delta", "vad"],
         "class_name": SpectrogramProcessor,
     },
-    # note that this is also a preprocessor for vtln and the `process` method requires an `utterances` arg that I'm not sure we can so easily pass in
-    # https://github.com/bootphon/shennong/blob/master/shennong/processor/ubm.py
-    # "ubm": {
-    #     "class_name": DiagUbmProcessor,
-    # },
-    # same as above, requires `utterances`
-    # seems like a postprocessor?
-    # note that it is not compatible with spectrogramp and bottleneck processors:
-    # https://github.com/bootphon/shennong/blob/master/shennong/pipeline.py#L134
-    # class: https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py
-    # "vtln": {
-    #     "class_name": VtlnProcessor,
-    # },
+  
 }
 
 window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
@@ -264,16 +245,7 @@ def build_schema():
 
     return schema
 
-
-def save_schema(save_path: str):
-    """main function; build and save schema"""
-    schema = build_schema()
-    with open(save_path, "w") as f:
-        f.write(dumps(schema))
-
-
 if __name__ == "__main__":
     from sys import argv
 
-    save_path = argv[1]
-    save_schema(save_path)
+    print(dumps(build_schema()))

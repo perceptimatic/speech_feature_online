@@ -8,7 +8,7 @@ from typing import Any, Dict
 import uuid
 from zipfile import ZipFile
 
-# import boto3
+import boto3
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio

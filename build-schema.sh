@@ -5,6 +5,6 @@
 
 set -euo pipefail
 
-docker-compose run --entrypoint="" --rm worker python3 /code/scripts/parse_shennong.py /code/processor-schema.json
+docker-compose -f docker-compose.dev.yaml run --entrypoint="" --rm worker python3 /code/scripts/parse_shennong.py > ./worker/processor-schema.json
 
 cp ./worker/processor-schema.json ./api/static/
