@@ -5,7 +5,6 @@ from app.validators import (
     _validate_analyses,
     _validate_top_level_fields,
     check_type,
-    find,
     raise_422,
     ValidationViolation,
 )
@@ -23,11 +22,6 @@ def test_check_type():
     test_spec = {"type": "string"}
 
     assert check_type(1, test_spec) is False
-
-
-def test_find():
-    """test that our helper function works"""
-    assert find([1, 2, 3], lambda x: x == 3) == 3
 
 
 def test_raise():
@@ -74,16 +68,34 @@ def test_analysis_validation_fails_without_top_key():
 
 def test_analysis_validation_fails_with_unknown_processor():
     """test a basic implementation"""
-    config = {"analyses": {"b": {"init_args": {}}}}
+    job_config = {"analyses": {"b": {"init_args": {}}}}
     with raises(HTTPException):
-        _validate_analyses(config, {"processors": [{"class_key": "a"}]})
+        _validate_analyses(
+            job_config,
+            {
+                "processors": {
+                    "a": {
+                        "init_args": [{"name": "foo"}],
+                        "required_postprocessors": [],
+                    }
+                }
+            },
+        )
 
 
 def test_analysis_validation_passes_empty_check():
     """test a basic implementation without type checks"""
-    job_config = {"analyses": {"a": {"init_args": []}}}
+    job_config = {"analyses": {"a": {"init_args": {}}}}
     assert _validate_analyses(
-        job_config, {"processors": [{"class_key": "a", "init_args": []}]}
+        job_config,
+        {
+            "processors": {
+                "a": {
+                    "init_args": [],
+                    "required_postprocessors": [],
+                }
+            }
+        },
     )
 
 
@@ -94,8 +106,11 @@ def test_analysis_validation_fails_string_check():
         assert _validate_analyses(
             job_config,
             {
-                "processors": [
-                    {"class_key": "a", "init_args": [{"name": "foo", "type": "string"}]}
-                ]
+                "processors": {
+                    "a": {
+                        "init_args": [{"name": "foo", "type": "string"}],
+                        "required_postprocessors": [],
+                    },
+                },
             },
         )

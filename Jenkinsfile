@@ -20,6 +20,7 @@ pipeline {
                     script {
                         docker.build('sfo-api:dev')
                         sh "docker run --entrypoint='' sfo-api:dev black --check app"
+                        sh "docker run --entrypoint='' sfo-api:dev pytest"
                         withCredentials([
                             usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'OWNER', passwordVariable: 'PAT')
                         ]) {
