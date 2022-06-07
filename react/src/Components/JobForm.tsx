@@ -446,21 +446,22 @@ export const globalDisplayFields: FormItem[] = [
     {
         name: 'res',
         component: 'radio',
-        default: '.pkl',
+        default: '.npz',
         type: 'string',
         label: (
             <>
-                Please select the format for your data files,{' '}
+                SFO currently supports the{' '}
                 <Link
                     target="_blank"
-                    href="https://docs.cognitive-ml.fr/shennong/python/features.html#module-shennong.features_collection"
+                    href="https://docs.scipy.org/doc/numpy-1.9.3/reference/generated/numpy.savez.html#:~:text=compressed%20.npz%20archive-,The%20.,npy%20format."
                 >
                     {' '}
-                    among those Shennong supports
-                </Link>
+                    .npz format
+                </Link>{' '}
+                only
             </>
         ),
-        options: ['.csv', '.pkl', '.npz'],
+        options: ['.npz'],
         required: true,
     },
 ];
