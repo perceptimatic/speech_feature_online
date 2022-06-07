@@ -2,11 +2,12 @@ from contextlib import AbstractContextManager
 from importlib import import_module
 from json import loads
 import logging
-from os import mkdir, path, remove, rmdir, scandir
+from os import mkdir, path, rmdir
+from posixpath import basename
+from shutil import move, make_archive, rmtree
 import tempfile
 from typing import Any, Dict
 import uuid
-from zipfile import ZipFile
 
 import boto3
 
@@ -97,86 +98,70 @@ class LocalFileManager(AbstractContextManager):
     Handles temporary file storage and, if we're not using s3, result storage.
     """
 
-    def __init__(self):
-        """Where to save results when storing analyses on the container's filesystem (typically dev env)"""
-        self.results_dir = "/srv/results"
-        """ Storage location of intermediate files """
-        self.tmp_dir = tempfile.gettempdir()
-        """ We keep track of these dirs so we can remove them once the analysis has finished """
-        self.result_dirs = []
-        self.input_paths = []
+    def __init__(self, tmp_dir: str = None):
+        """Where to save results when storing analyses on the container's filesystem (typically dev env)
+        Normally tmp_dir can be ignored; it is used mostly for testing.
+        """
+        self.save_dir = "/srv/results"
+        """ Root dir for temp files, to be removed atexit """
+        self.tmp_dir = (
+            tmp_dir if tmp_dir else path.join(tempfile.gettempdir(), uuid.uuid4().hex)
+        )
+        mkdir(self.tmp_dir)
+        print(self.tmp_dir)
+        """ Where to store results before zipping"""
+        self.tmp_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
+        """ Where to store downloads before processing """
+        self.tmp_download_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
+        mkdir(self.tmp_results_dir)
+        mkdir(self.tmp_download_dir)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.remove_temps()
 
     def load(self, filepath: str):
-        """Check existence, then queue for removal"""
+        """Check existence, then move to temp processing directory"""
         if not path.exists(filepath):
             raise ValueError("File does not exist")
-        self.input_paths.append(filepath)
-        return filepath
+        move(filepath, self.tmp_download_dir)
+        return path.join(self.tmp_download_dir, basename(filepath))
 
-    def make_tmp_dir(self):
+    def get_tmp_result_dir_name(self, name: str):
         """Create a temporary directory on the local filesystem"""
-        dirpath = path.join(self.tmp_dir, uuid.uuid4().hex)
-        mkdir(dirpath)
+        dirpath = path.join(self.tmp_results_dir, name)
         return dirpath
 
-    def register_result_dir(self):
-        """return a valid path for a temporary directory and store for later cleanup"""
-        dirpath = path.join(self.tmp_dir, uuid.uuid4().hex)
-        self.result_dirs.append(dirpath)
-        return dirpath
-
-    def register_result_path(self, filepath: str, extension: str):
-        """Create a directory and return the name of a valid filepath for an intermediate file"""
-        dir_name = self.register_result_dir()
-        mkdir(dir_name)
+    def get_tmp_result_path(self, filepath: str, extension: str):
+        """Return the name of a valid filepath for an intermediate file"""
         result_path = path.join(
-            dir_name, f"{path.splitext(path.basename(filepath))[0]}-features{extension}"
+            self.tmp_results_dir,
+            f"{path.splitext(path.basename(filepath))[0]}-features{extension}",
         )
         return result_path
 
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
-        for filepath in [*self.result_dirs, *self.input_paths]:
-            dirpath = path.dirname(filepath) if path.isfile(filepath) else filepath
-            with scandir(dirpath) as it:
-                for entry in it:
-                    try:
-                        """can run into errors if path doesn't contain file yet"""
-                        remove(path.join(dirpath, entry.name))
-                    except Exception as e:
-                        logger.error(
-                            f"Caught exception {e} while trying to remove result path"
-                        )
-            rmdir(dirpath)
+
+        def log_error(function, path, excinfo):
+            logger.error(excinfo)
+
+        rmtree(self.tmp_dir, onerror=log_error)
 
         return True
 
     def store(self):
         """Store results in the static directory and return url"""
-        result_dir = path.join(self.results_dir, uuid.uuid4().hex)
-        mkdir(result_dir)
-        zip_path = self.zip_tmp_files(result_dir)
+        zip_path = self.zip_tmp_files()
         spl = zip_path.split("/")
         return f"{app_settings.STATIC_ASSET_URL}/{spl[3]}/{spl[4]}"
 
-    def zip_tmp_files(self, save_dir: str):
+    def zip_tmp_files(self):
         """Zip intermediate files"""
-        zip_path = path.join(save_dir, f"{uuid.uuid4().hex}.zip")
-
-        with ZipFile(
-            zip_path,
-            "x",
-        ) as zipped:
-            for dirpath in self.result_dirs:
-                with scandir(dirpath) as it:
-                    for entry in it:
-                        # avoid infinite loop if zip is also stored in tmp dir
-                        if path.join(dirpath, entry.name) != zip_path:
-                            zipped.write(path.join(dirpath, entry.name), entry.name)
-        return zip_path
+        return make_archive(
+            path.join(self.tmp_dir, "sfo-results"),
+            "zip",
+            self.tmp_results_dir,
+        )
 
 
 class S3FileManager(LocalFileManager):
@@ -193,8 +178,7 @@ class S3FileManager(LocalFileManager):
     def load(self, key):
         """Download file from s3 and store both key and local temp path for cleanup"""
         basename = path.basename(key)
-        save_path = path.join(self.make_tmp_dir(), basename)
-        self.input_paths.append(save_path)
+        save_path = path.join(self.tmp_download_dir, basename)
         self.resource.Bucket(self.bucket).download_file(key, save_path)
         self.removable_keys.append(key)
         return save_path
@@ -211,9 +195,7 @@ class S3FileManager(LocalFileManager):
 
     def store(self):
         """Zip up results, upload to bucket, and queue local zip file for removal"""
-        tmp_dir = self.make_tmp_dir()
-        self.input_paths.append(tmp_dir)
-        zip_path = self.zip_tmp_files(tmp_dir)
+        zip_path = self.zip_tmp_files()
         key = path.basename(zip_path)
         self.resource.meta.client.upload_file(zip_path, self.bucket, key)
         # default expiration is an hour
@@ -252,11 +234,12 @@ def process_data(
             """
             if res_type == ".csv":
                 serializer = "csv"
-                outpath = manager.register_result_dir()
+                bname = basename(file_path)
+                outpath = manager.get_tmp_result_dir_name(bname)
             else:
                 # if not a csv, let shennong resolve the serializer
                 serializer = None
-                outpath = manager.register_result_path(local_path, res_type)
+                outpath = manager.get_tmp_result_path(local_path, res_type)
             analyser.collection.save(outpath, serializer=serializer)
             logger.info(f"saved {file_path}")
 
@@ -264,28 +247,3 @@ def process_data(
         url = manager.store()
 
     return url
-
-
-if __name__ == "__main__":
-    # hmmm this does NOT fix things, as in, still using all the processors...
-    from sys import argv
-    from joblib import Parallel, delayed
-    from shennong.processor.bottleneck import BottleneckProcessor
-
-    use_job_lib = False
-
-    try:
-        if argv[1] == "-p":
-            use_job_lib = True
-    except Exception:
-        pass
-
-    audio = Audio.load("/code/app/tests/fixtures/long-mono.wav")
-    p = BottleneckProcessor()
-
-    if use_job_lib:
-        Parallel(n_jobs=16, verbose=True, prefer="threads")(
-            delayed(p.process)(audio) for i in [1]
-        )
-    else:
-        r = p.process(audio)
