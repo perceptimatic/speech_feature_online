@@ -8,8 +8,17 @@ pipeline {
         stage('Clone repository') {
             steps {
                 checkout scm
+            }
+        }
+        stage('Build schema') {
+            steps {
                 script {
-                    sh './build-schema.sh'
+                    withCredentials([
+                            usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'OWNER', passwordVariable: 'PAT')
+                        ]) {
+                            sh 'echo $PAT | docker login ghcr.io -u $OWNER --password-stdin'
+                            sh './build-schema.sh'
+                        }
                 }
             }
         }
