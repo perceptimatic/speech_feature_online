@@ -19,6 +19,7 @@ import {
     capitalize,
     styled,
     Fade,
+    Checkbox,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import {
@@ -52,9 +53,19 @@ import {
     JobConfig,
 } from '../types';
 
+enum FailureType {
+    TOO_LARGE = 'The file exceeds 50MB maxmimum size. Please compress or split your samples into smaller files.',
+    UPLOAD_FAILURE = 'The file failed to upload. Please check your connection and try again.',
+}
+
+interface UploadFailure {
+    file: File;
+    reason: FailureType;
+}
+
 const FormPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
-    const [failedFiles, setFailedFiles] = useState<File[]>([]);
+    const [failedFiles, setFailedFiles] = useState<UploadFailure[]>([]);
     const [invalidFields, setInvalidFields] = useState<string[]>();
     const [progress, setProgress] = useState<ProgressIncrement>();
     const [schema, setSchema] = useState<AnalysisFormGroup[]>();
@@ -205,22 +216,40 @@ const FormPage: React.FC = () => {
         });
     };
     const uploadFiles = async (files: File[]) => {
-        let failures: File[] = failedFiles.slice();
-        return postFiles(files, setProgress)
+        let failures = failedFiles.slice();
+        let success = true;
+
+        const _files = files.filter(f => {
+            let passes = true;
+            if (f.size > 50 * 2 ** 20) {
+                //50MB
+                passes = false;
+                success = false;
+                failures.push({ file: f, reason: FailureType.TOO_LARGE });
+            }
+            return passes;
+        });
+
+        return postFiles(_files, setProgress)
             .then(r => {
-                let success = true;
                 const paths = r
                     .map(res => {
                         if (!isUploadError(res)) {
                             // remove from failed list (if applicable)
                             failures = failures.filter(
-                                f => f.name !== res.originalFileName
+                                f => f.file.name !== res.originalFileName
                             );
                             return res.remoteFileName;
                         } else if (isUploadError(res)) {
                             success = false;
-                            if (res.file && !failures.includes(res.file)) {
-                                failures.push(res.file);
+                            if (
+                                res.file &&
+                                !failures.map(f => f.file).includes(res.file)
+                            ) {
+                                failures.push({
+                                    file: res.file,
+                                    reason: FailureType.UPLOAD_FAILURE,
+                                });
                             }
                         }
                     })
@@ -386,29 +415,43 @@ const FormPage: React.FC = () => {
                                 item
                                 spacing={2}
                             >
-                                <Grid item>
-                                    <Button
-                                        variant="contained"
-                                        component="label"
-                                    >
-                                        Add files
-                                        <input
-                                            accept=".mp3,.wav,.ogg,.flac"
-                                            type="file"
-                                            hidden
-                                            multiple
-                                            onChange={e => {
-                                                if (e.currentTarget.files) {
-                                                    uploadFiles(
-                                                        Array.from(
-                                                            e.currentTarget
-                                                                .files
-                                                        )
-                                                    ).then(setUploadSucess);
-                                                }
-                                            }}
-                                        />
-                                    </Button>
+                                <Grid
+                                    alignItems="center"
+                                    container
+                                    direction="row"
+                                    item
+                                    spacing={2}
+                                >
+                                    <Grid item>
+                                        <Button
+                                            variant="contained"
+                                            component="label"
+                                        >
+                                            Add files
+                                            <input
+                                                accept=".mp3,.wav,.ogg,.flac"
+                                                type="file"
+                                                hidden
+                                                multiple
+                                                onChange={e => {
+                                                    if (e.currentTarget.files) {
+                                                        uploadFiles(
+                                                            Array.from(
+                                                                e.currentTarget
+                                                                    .files
+                                                            )
+                                                        ).then(setUploadSucess);
+                                                    }
+                                                }}
+                                            />
+                                        </Button>
+                                    </Grid>
+                                    <Grid item>
+                                        <Typography variant="caption">
+                                            For best results, mono .wav files
+                                            are recommended
+                                        </Typography>
+                                    </Grid>
                                 </Grid>
                                 <Grid item>
                                     <Divider />
@@ -419,7 +462,9 @@ const FormPage: React.FC = () => {
                                         removeFailedFile={file => {
                                             const newFailedFiles =
                                                 failedFiles.filter(
-                                                    f => f.name !== file.name
+                                                    f =>
+                                                        f.file.name !==
+                                                        file.file.name
                                                 );
                                             setFailedFiles(newFailedFiles);
                                         }}
@@ -437,8 +482,10 @@ const FormPage: React.FC = () => {
                                                 removeFileFromS3(key);
                                             }
                                         }}
-                                        retryUploads={(files: File[]) =>
-                                            uploadFiles(files)
+                                        retryUploads={(
+                                            files: UploadFailure[]
+                                        ) =>
+                                            uploadFiles(files.map(f => f.file))
                                         }
                                         successfulUploads={state.files}
                                     />
@@ -592,7 +639,6 @@ const FormPage: React.FC = () => {
                                         disabled={
                                             !!invalidFields?.length ||
                                             !getAtLeastOneFeatureSelected() ||
-                                            !!failedFiles.length ||
                                             !state.files.length
                                         }
                                     >
@@ -645,10 +691,10 @@ const FormPage: React.FC = () => {
 };
 
 interface UploadStatusBoxProps {
-    failedUploads: File[];
-    removeFailedFile: (file: File) => void;
+    failedUploads: UploadFailure[];
+    removeFailedFile: (file: UploadFailure) => void;
     removeUploadedFile: (key: string) => void;
-    retryUploads: (files: File[]) => void;
+    retryUploads: (files: UploadFailure[]) => void;
     successfulUploads: string[];
 }
 
@@ -658,73 +704,115 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
     removeUploadedFile,
     retryUploads,
     successfulUploads,
-}) => (
-    <Grid container item spacing={2} direction="column">
-        {successfulUploads.length ? (
-            <Grid item>
-                <Box sx={{ maxHeight: '350px', overflowY: 'auto' }}>
-                    <Typography>
-                        The following files will be included in the analysis:
+}) => {
+    const [retries, setRetries] = useState<UploadFailure[]>();
+
+    const toggleRetry = (f: UploadFailure) =>
+        retries?.map(f => f.file.name).includes(f.file.name)
+            ? setRetries(retries.filter(i => i.file.name !== f.file.name))
+            : setRetries(retries?.concat(f));
+
+    return (
+        <Grid container item spacing={2} direction="column">
+            {successfulUploads.length ? (
+                <Grid item>
+                    <Box sx={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        <Typography>
+                            The following files will be included in the
+                            analysis:
+                        </Typography>
+                        {successfulUploads.map(f => (
+                            <List key={f}>
+                                <ListItem disablePadding>
+                                    <ListItemButton
+                                        sx={{ flexGrow: 0 }}
+                                        onClick={() => removeUploadedFile(f)}
+                                    >
+                                        <ListItemIcon>
+                                            <Delete />
+                                        </ListItemIcon>
+                                    </ListItemButton>
+                                    <ListItemText>
+                                        {getFileBaseName(f)}
+                                    </ListItemText>
+                                </ListItem>
+                            </List>
+                        ))}
+                    </Box>
+                </Grid>
+            ) : (
+                <Grid item>
+                    <Typography color="error">
+                        Please select at least one file.
                     </Typography>
-                    {successfulUploads.map(f => (
-                        <List key={f}>
-                            <ListItem disablePadding>
-                                <ListItemButton
-                                    sx={{ flexGrow: 0 }}
-                                    onClick={() => removeUploadedFile(f)}
-                                >
-                                    <ListItemIcon>
-                                        <Delete />
-                                    </ListItemIcon>
-                                </ListItemButton>
-                                <ListItemText>
-                                    {getFileBaseName(f)}
-                                </ListItemText>
+                </Grid>
+            )}
+            {!!failedUploads.length && (
+                <Grid item>
+                    <Typography color="error">
+                        The following uploads were unsuccessful:
+                    </Typography>
+                    <List>
+                        {failedUploads.map(u => (
+                            <ListItem disablePadding key={u.file.name}>
+                                <Grid container direction="column">
+                                    <Grid
+                                        item
+                                        container
+                                        direction="row"
+                                        wrap="nowrap"
+                                    >
+                                        <ListItemButton
+                                            sx={{ flexGrow: 0 }}
+                                            onClick={() => removeFailedFile(u)}
+                                        >
+                                            <ListItemIcon>
+                                                <Delete />
+                                            </ListItemIcon>
+                                        </ListItemButton>
+                                        <ListItemText>
+                                            {u.file.name}
+                                        </ListItemText>
+                                    </Grid>
+                                    <Grid
+                                        item
+                                        container
+                                        direction="row"
+                                        wrap="nowrap"
+                                    >
+                                        <ListItemText>
+                                            Reason: {u.reason}
+                                        </ListItemText>
+                                        {u.reason ===
+                                            FailureType.UPLOAD_FAILURE && (
+                                            <Checkbox
+                                                checked={
+                                                    retries &&
+                                                    retries
+                                                        .map(f => f.file.name)
+                                                        .includes(u.file.name)
+                                                }
+                                                onChange={() => toggleRetry(u)}
+                                            />
+                                        )}
+                                    </Grid>
+                                </Grid>
                             </ListItem>
-                        </List>
-                    ))}
-                </Box>
-            </Grid>
-        ) : (
-            <Grid item>
-                <Typography color="error">
-                    Please select at least one file.
-                </Typography>
-            </Grid>
-        )}
-        {!!failedUploads.length && (
-            <Grid item>
-                <Typography color="error">
-                    The following uploads were unsuccessful:
-                </Typography>
-                <List>
-                    {failedUploads.map(u => (
-                        <List key={u.name}>
-                            <ListItem disablePadding>
-                                <ListItemButton
-                                    sx={{ flexGrow: 0 }}
-                                    onClick={() => removeFailedFile(u)}
-                                >
-                                    <ListItemIcon>
-                                        <Delete />
-                                    </ListItemIcon>
-                                </ListItemButton>
-                                <ListItemText>{u.name}</ListItemText>
-                            </ListItem>
-                        </List>
-                    ))}
-                </List>
-                <Button
-                    variant="contained"
-                    color="error"
-                    onClick={() => retryUploads(failedUploads)}
-                >
-                    Retry All
-                </Button>
-            </Grid>
-        )}
-    </Grid>
-);
+                        ))}
+                    </List>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        disabled={!(retries || []).length}
+                        onClick={() => !!retries && retryUploads(retries)}
+                    >
+                        Retry All
+                    </Button>
+                </Grid>
+            )}
+        </Grid>
+    );
+};
 
 const getFileBaseName = (filepath: string) =>
     filepath.replaceAll(/(.+)\//g, '');

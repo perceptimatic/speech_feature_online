@@ -18,8 +18,7 @@ export class ProgressIncrement {
         this.total = total;
     }
 
-    getRemaining = () =>
-        Math.floor((this.loaded / this.total || Infinity) * 100);
+    getRemaining = () => Math.floor((this.loaded / this.total || 1) * 100);
 }
 
 /**
