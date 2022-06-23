@@ -133,38 +133,10 @@ export const removeFileFromS3 = async (key: string) => {
         .promise();
 };
 
-const postFilesToLocalServer = (files: File[]) =>
-    Promise.all(
-        files.map(f => {
-            const upload = new FormData();
-            upload.append('upload', f);
-            return axios
-                .post<{ contentUrl: string }>(
-                    process.env.REACT_UPLOAD_ENDPOINT!,
-                    upload
-                )
-                .then(r => ({
-                    remoteFileName: r.data.contentUrl,
-                    originalFileName: f.name,
-                }));
-        })
-    );
-
-const resolveUploadMethod = (
-    files: File[],
-    progressCb?: (progress: ProgressIncrement) => void
-) => {
-    if (process.env.STORAGE_DRIVER == 's3' && progressCb) {
-        return postFilesToS3(files, progressCb);
-    } else {
-        return postFilesToLocalServer(files);
-    }
-};
-
 export const postFiles = (
     files: File[],
-    progressCb?: (progress: ProgressIncrement) => void
-) => resolveUploadMethod(files, progressCb);
+    progressCb: (progress: ProgressIncrement) => void
+) => postFilesToS3(files, progressCb);
 
 export const submitForm = (formData: JobConfig) => {
     return axios.post('/api/shennong-job', formData);

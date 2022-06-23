@@ -5,7 +5,6 @@ WORKDIR /code
 ARG USERNAME=fastapi
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ARG UPLOAD_DIR=/srv/uploads
 
 
 # create a sudo user, useful when developing from within a contaienr
@@ -29,8 +28,6 @@ RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-
 COPY . .
 
 RUN poetry install --no-root 
-
-RUN chown -R $USER_UID:$USER_GID . && chown -R $USER_UID:$USER_GID $UPLOAD_DIR
 
 USER $USERNAME
 

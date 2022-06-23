@@ -4,8 +4,6 @@ services:
     image: ghcr.io/perceptimatic/sfo-api:latest
     build:
       context: ./api
-      args:
-        UPLOAD_DIR: $UPLOAD_DIR
     ports:
       - ${APP_PORT}:80
     environment:
@@ -22,10 +20,7 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_USER
       - PROCESSING_QUEUE
-      - STORAGE_DRIVER
-      - UPLOAD_DIR
     volumes:
-      - ./uploads:${UPLOAD_DIR}
       - ./api:/code
     networks:
       - speech-feature
@@ -37,13 +32,14 @@ services:
       - redis
     build:
       context: ./worker
-      args:
-        UPLOAD_DIR: $UPLOAD_DIR
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_DEFAULT_REGION
       - AWS_SECRET_ACCESS_KEY
       - BUCKET_NAME
+      - GITHUB_OWNER
+      - GITHUB_PAT
+      - LAUNCH_TEMPLATE_ID
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
@@ -54,16 +50,12 @@ services:
       - SMTP_PORT
       - SMTP_LOGIN
       - SMTP_PASSWORD
-      - STATIC_ASSET_URL
-      - STORAGE_DRIVER
-      - UPLOAD_DIR
       - WORKER_CONCURRENCY
       - WORKER_DEBUG
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:
-      - ./uploads:${UPLOAD_DIR}
       - ./worker:/code
-      - ./api/static:/srv/results
+      - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
     networks:
       - speech-feature
   react:
@@ -73,11 +65,10 @@ services:
     environment:
       - API_HOST_PORT
       - AWS_DEFAULT_REGION
+      - BUCKET_NAME
       - REACT_PORT
       - REACT_TMP_CRED_ENDPOINT
       - REACT_UPLOAD_ENDPOINT
-      - STORAGE_DRIVER
-      - BUCKET_NAME
     working_dir: /usr/app
     networks:
       - speech-feature
@@ -88,6 +79,13 @@ services:
     image: redis:latest
     networks:
       - speech-feature
+  shennong-runner:
+    image: ghcr.io/perceptimatic/sfo-shennong-runner:latest
+    build:
+      context: ./shennong_runner
+    restart: "no"
+    # we don't want this to actually start
+    entrypoint: /bin/true
   flower:
     image: mher/flower
     environment:

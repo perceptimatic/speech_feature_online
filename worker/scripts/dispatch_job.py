@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-from email.mime import audio
 from sys import argv, exit, path as syspath
 
 # make sure the app module in in the python path
@@ -31,21 +30,20 @@ if __name__ == "__main__":
     if not exists(audio_path):
         raise FileNotFoundError(f"audio file not found at {audio_path}!")
 
-    if app_settings.STORAGE_DRIVER == 's3':
-        resource = boto3.resource("s3")
-        client = boto3.client("s3")
-        bucket = app_settings.BUCKET_NAME
-        filename = f"tests/{basename(audio_path)}"
-        client.upload_file(audio_path, bucket, filename)
-    else:
-        filename = audio_path
+    resource = boto3.resource("s3")
+    client = boto3.client("s3")
+    bucket = app_settings.BUCKET_NAME
+    filename = f"tests/{basename(audio_path)}"
+    client.upload_file(audio_path, bucket, filename)
 
     with open(json_path) as p:
         args = load(p)
 
+    args['files'] = [filename]
+
     job_count = args.pop("job_count", 1)
 
     for job in range(job_count):
-        process_shennong_job.delay([filename], args, send_email=False)
+        process_shennong_job.delay(args, send_email=False)
 
     print(f"{job_count} jobs dispatched!")

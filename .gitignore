@@ -26,6 +26,7 @@ benchmarks.md
 processor-schema.json
 !/**/.gitkeep
 
+*.pem
 
-worker/app/tests/fixtures
-!/worker/app/tests/fixtures/brief-sample-audio
+shennong_runner/app/tests/fixtures/**/*
+!shennong_runner/app/tests/fixtures/mono-sample.wav

@@ -14,15 +14,6 @@ def local_file_manager(tmpdir):
     return fm
 
 
-def test_load(local_file_manager: LocalFileManager, tmp_path: Path):
-    """Test load function moves file into manager's temp dir"""
-    testfile = tmp_path / "test.txt"
-    testfile.touch()
-    filepath = local_file_manager.load(str(testfile))
-    assert local_file_manager.tmp_dir in filepath
-    assert not testfile.exists()
-
-
 def test_register_result_dir(local_file_manager: LocalFileManager):
     """Test that the directory path is named but not created"""
     result_dir = local_file_manager.get_tmp_result_dir_name("foobar")
@@ -47,13 +38,11 @@ def test_remove_temps(local_file_manager: LocalFileManager, tmp_path):
     # tmp processing file
     file = tmp_path / "tester.tst"
     file.touch()
-    input_path = local_file_manager.load(str(file))
     # tmp result file
     result_path = Path(local_file_manager.get_tmp_result_path(tmp_path, ".tst"))
     result_path.touch()
     local_file_manager.remove_temps()
     assert not path.exists(str(result_path))
-    assert not path.exists(str(input_path))
 
 
 def test_context_manager(local_file_manager):

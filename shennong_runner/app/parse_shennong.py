@@ -4,11 +4,8 @@ from json import dumps
 from sys import path as syspath
 from typing import List, Type, Union
 
-from joblib import Parallel, delayed
-
 # make sure the app module in in the python path
 syspath.insert(0, "../app.py")
-
 
 from shennong.processor.base import FeaturesProcessor
 from shennong.processor.bottleneck import BottleneckProcessor
@@ -19,8 +16,6 @@ from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostPr
 from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
 from shennong.processor.plp import PlpProcessor
 from shennong.processor.spectrogram import SpectrogramProcessor
-from shennong.processor.ubm import DiagUbmProcessor
-from shennong.processor.vtln import VtlnProcessor
 
 from shennong.postprocessor.base import FeaturesPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor

@@ -16,7 +16,6 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_USER
       - PROCESSING_QUEUE
-      - STORAGE_DRIVER=s3
     entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
   worker:
     image: ghcr.io/perceptimatic/sfo-worker:latest
@@ -28,11 +27,14 @@ services:
       - AWS_DEFAULT_REGION
       - AWS_SECRET_ACCESS_KEY
       - BUCKET_NAME
+      - LAUNCH_TEMPLATE_ID
+      - GITHUB_PAT
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
       - POSTGRES_USER
       - PROCESSING_QUEUE
+      - GITHUB_OWNER
       - SENDER_EMAIL
       - SMTP_HOST
       - SMTP_PORT
@@ -41,6 +43,8 @@ services:
       - STORAGE_DRIVER
       - WORKER_CONCURRENCY
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
+    volumes:
+      - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
   redis:
     image: redis:latest
     networks:

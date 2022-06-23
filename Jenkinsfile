@@ -10,15 +10,19 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Build Shennong Runner') {
+            steps {
+                dir('shennong_runner') {
+                    script {
+                        docker.build('sfo-shennong-runner:dev')
+                    }
+                }
+            }
+        }
         stage('Build schema') {
             steps {
                 script {
-                    withCredentials([
-                            usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'OWNER', passwordVariable: 'PAT')
-                        ]) {
-                            sh 'echo $PAT | docker login ghcr.io -u $OWNER --password-stdin'
-                            sh './build-schema.sh'
-                        }
+                    sh './build-schema.sh'
                 }
             }
         }
@@ -65,6 +69,27 @@ pipeline {
                 }
             }
         }
+
+        stage('Test, (Re)Build, and Push Shennong Runner') {
+            when { changeset 'shennong_runner/**/*' }
+            steps {
+                dir('shennong_runner') {
+                    script {
+                        docker.build('sfo-shennong-runner:dev')
+                        sh "docker run --rm --entrypoint='' sfo-shennong-runner:dev black --check app"
+                        sh "docker run --entrypoint='' sfo-shennong-runner:dev pytest"
+                        withCredentials([
+                            usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'OWNER', passwordVariable: 'PAT')
+                        ]) {
+                            sh 'echo $PAT | docker login ghcr.io -u $OWNER --password-stdin'
+                            sh "docker tag sfo-shennong-runner:dev ghcr.io/${OWNER}/sfo-shennong-runner:latest"
+                            sh "docker push ghcr.io/${OWNER}/sfo-shennong-runner:latest"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Build React App') {
             when { changeset 'react/**/*' }
             agent {

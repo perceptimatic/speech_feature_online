@@ -1,4 +1,4 @@
-FROM python:3-slim
+FROM conda/miniconda3
 WORKDIR /code
 
 ARG USERNAME=worker
@@ -15,27 +15,15 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
-RUN apt-get update && apt-get install -y \
-    openssh-client
 
-RUN mkdir /home/${USERNAME}/.ssh && \
-    chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}/.ssh && \
-    chmod 700 /home/${USERNAME}/.ssh
+COPY ./environment.yml .
 
-
-# Install Poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
-    cd /usr/local/bin && \
-    chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \
-    ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false
+RUN conda env update --name base --file environment.yml 
 
 COPY . .
-
-RUN poetry install --no-root
 
 RUN chown -R ${USER_UID}:${USER_GID} /code 
 
 USER ${USER_UID}
 
-
+ENTRYPOINT [ "python3", "-m", "app.analyse" ]

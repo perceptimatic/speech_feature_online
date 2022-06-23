@@ -1,19 +1,20 @@
+import argparse
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from importlib import import_module
 from json import loads
 import logging
-from os import mkdir, path, rmdir
+from os import mkdir, path
 from posixpath import basename
-from shutil import move, make_archive, rmtree
+from shutil import make_archive, rmtree
 import tempfile
-from typing import Any, Dict
+from typing import Any, Dict, List
 import uuid
 
 import boto3
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio
-
 # this is here to prevent a circular dependency
 from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
@@ -23,14 +24,24 @@ from app.settings import settings as app_settings
 logger = logging.getLogger(__name__)
 
 with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
-    config = loads(f.read())
+    shennong_schema = loads(f.read())
 
 
 def resolve_processor(class_key: str, init_args: Dict[str, Any]):
-    class_name = config["processors"][class_key]["class_name"]
+    class_name = shennong_schema["processors"][class_key]["class_name"]
     module = import_module(f"shennong.processor.{class_key}")
     cls = module.__dict__[class_name]
     return cls(**init_args)
+
+
+@dataclass
+class JobArgs:
+    analyses: Dict[str, Any]
+    bucket: str
+    channel: int
+    files: List[str]
+    save_path: str
+    res: str
 
 
 class CmvnWrapper:
@@ -47,7 +58,7 @@ class CmvnWrapper:
 def resolve_postprocessor(class_key: str, features=None):
     if class_key == "cmvn":
         return CmvnWrapper(features.ndims)
-    class_name = config["postprocessors"][class_key]["class_name"]
+    class_name = shennong_schema["postprocessors"][class_key]["class_name"]
     try:
         module = import_module(f"shennong.postprocessor.{class_key}")
         return module.__dict__[class_name]()
@@ -99,16 +110,15 @@ class LocalFileManager(AbstractContextManager):
     """
 
     def __init__(self, tmp_dir: str = None):
-        """Where to save results when storing analyses on the container's filesystem (typically dev env)
+        """Where to save results when storing analyses on the container's filesystem (typically dev env).
         Normally tmp_dir can be ignored; it is used mostly for testing.
         """
-        self.save_dir = "/srv/results"
+
         """ Root dir for temp files, to be removed atexit """
         self.tmp_dir = (
             tmp_dir if tmp_dir else path.join(tempfile.gettempdir(), uuid.uuid4().hex)
         )
         mkdir(self.tmp_dir)
-        print(self.tmp_dir)
         """ Where to store results before zipping"""
         self.tmp_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
         """ Where to store downloads before processing """
@@ -118,13 +128,6 @@ class LocalFileManager(AbstractContextManager):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.remove_temps()
-
-    def load(self, filepath: str):
-        """Check existence, then move to temp processing directory"""
-        if not path.exists(filepath):
-            raise ValueError("File does not exist")
-        move(filepath, self.tmp_download_dir)
-        return path.join(self.tmp_download_dir, basename(filepath))
 
     def get_tmp_result_dir_name(self, name: str):
         """Create a temporary directory on the local filesystem"""
@@ -149,12 +152,6 @@ class LocalFileManager(AbstractContextManager):
 
         return True
 
-    def store(self):
-        """Store results in the static directory and return url"""
-        zip_path = self.zip_tmp_files()
-        spl = zip_path.split("/")
-        return f"{app_settings.STATIC_ASSET_URL}/{spl[3]}/{spl[4]}"
-
     def zip_tmp_files(self):
         """Zip intermediate files"""
         return make_archive(
@@ -167,11 +164,12 @@ class LocalFileManager(AbstractContextManager):
 class S3FileManager(LocalFileManager):
     """S3 client provider that employs and overrides local methods as necessary."""
 
-    def __init__(self):
+    def __init__(self, save_path: str, bucket_name: str):
         super().__init__()
+        self.save_path = save_path
         self.resource = boto3.resource("s3")
         self.client = boto3.client("s3")
-        self.bucket = app_settings.BUCKET_NAME
+        self.bucket = bucket_name
         """ store a list of keys that we can remove when we're done """
         self.removable_keys = []
 
@@ -196,26 +194,22 @@ class S3FileManager(LocalFileManager):
     def store(self):
         """Zip up results, upload to bucket, and queue local zip file for removal"""
         zip_path = self.zip_tmp_files()
-        key = path.basename(zip_path)
-        self.resource.meta.client.upload_file(zip_path, self.bucket, key)
-        # default expiration is an hour
-        url = self.client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": self.bucket, "Key": key},
-            ExpiresIn=60 * 60 * 168,
-        )
-        return url
+        self.resource.meta.client.upload_file(zip_path, self.bucket, self.save_path)
+        return True
 
 
 def process_data(
-    file_paths: str, analysis_settings: Dict[str, Dict], res_type: str, channel: int
+    jobargs: JobArgs,
 ) -> str:
     """Process each file passed for analysis"""
 
-    storage_manager = (
-        S3FileManager() if app_settings.STORAGE_DRIVER == "s3" else LocalFileManager()
-    )
+    file_paths = jobargs.files
+    res_type = jobargs.res
+    channel = jobargs.channel
+    analysis_settings = jobargs.analyses
 
+    storage_manager = S3FileManager(jobargs.save_path, jobargs.bucket)
+       
     with storage_manager as manager:
         # shennong the devil outta them:
         for file_path in file_paths:
@@ -243,7 +237,15 @@ def process_data(
             analyser.collection.save(outpath, serializer=serializer)
             logger.info(f"saved {file_path}")
 
-        # storeManager has kept track of temp result paths
-        url = manager.store()
+        manager.store()
 
-    return url
+    return True
+
+
+if __name__ == "__main__":
+    from sys import argv
+    analysis_settings = loads(argv[1])
+    print(argv)
+    print(analysis_settings)
+    config = JobArgs(**analysis_settings)
+    process_data(config)
