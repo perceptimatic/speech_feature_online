@@ -15,6 +15,7 @@ import boto3
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio
+
 # this is here to prevent a circular dependency
 from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
@@ -71,10 +72,7 @@ class Analyser:
     """Resolve processors and postprocessors from config and run analyses"""
 
     def __init__(
-        self,
-        filepath: str,
-        channel: int,
-        collection: FeaturesCollection,
+        self, filepath: str, channel: int, collection: FeaturesCollection,
     ):
         self.collection = collection
         sound = Audio.load(filepath)
@@ -155,9 +153,7 @@ class LocalFileManager(AbstractContextManager):
     def zip_tmp_files(self):
         """Zip intermediate files"""
         return make_archive(
-            path.join(self.tmp_dir, "sfo-results"),
-            "zip",
-            self.tmp_results_dir,
+            path.join(self.tmp_dir, "sfo-results"), "zip", self.tmp_results_dir,
         )
 
 
@@ -198,9 +194,7 @@ class S3FileManager(LocalFileManager):
         return True
 
 
-def process_data(
-    jobargs: JobArgs,
-) -> str:
+def process_data(jobargs: JobArgs,) -> str:
     """Process each file passed for analysis"""
 
     file_paths = jobargs.files
@@ -209,7 +203,7 @@ def process_data(
     analysis_settings = jobargs.analyses
 
     storage_manager = S3FileManager(jobargs.save_path, jobargs.bucket)
-       
+
     with storage_manager as manager:
         # shennong the devil outta them:
         for file_path in file_paths:
@@ -244,6 +238,7 @@ def process_data(
 
 if __name__ == "__main__":
     from sys import argv
+
     analysis_settings = loads(argv[1])
     print(argv)
     print(analysis_settings)

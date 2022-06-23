@@ -59,7 +59,6 @@ processor_class_map = {
         "valid_postprocessors": ["cmvn", "delta", "vad"],
         "class_name": SpectrogramProcessor,
     },
-  
 }
 
 window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
@@ -70,18 +69,10 @@ processor_options = {
     "pitch_crepe": {"model_capacity": ["full", "large", "medium", "small", "tiny"]},
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/energy.py#L26
     "energy": {"window_type": window_options, "compression": ["log", "sqrt", "off"]},
-    "filterbank": {
-        "window_type": window_options,
-    },
-    "mfcc": {
-        "window_type": window_options,
-    },
-    "plp": {
-        "window_type": window_options,
-    },
-    "spectrogram": {
-        "window_type": window_options,
-    },
+    "filterbank": {"window_type": window_options,},
+    "mfcc": {"window_type": window_options,},
+    "plp": {"window_type": window_options,},
+    "spectrogram": {"window_type": window_options,},
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py#L156
     "vtln": {"norm_type": ["offset", "none", "diag"]},
 }
@@ -239,6 +230,7 @@ def build_schema():
         schema["postprocessors"][k] = processor.toschema()
 
     return schema
+
 
 if __name__ == "__main__":
     from sys import argv

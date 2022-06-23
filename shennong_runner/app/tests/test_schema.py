@@ -16,9 +16,7 @@ def test_can_process_simple_file_with_default_args():
     collection = FeaturesCollection()
 
     analyser = Analyser(
-        path.join(
-            app_settings.PROJECT_ROOT, "app/tests/fixtures/mono-sample.wav"
-        ),
+        path.join(app_settings.PROJECT_ROOT, "app/tests/fixtures/mono-sample.wav"),
         1,
         collection,
     )

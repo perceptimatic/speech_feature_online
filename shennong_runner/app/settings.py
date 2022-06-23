@@ -6,4 +6,5 @@ class Settings:
 
     PROJECT_ROOT: str = path.abspath(path.join(path.dirname(__file__), ".."))
 
+
 settings = Settings()
