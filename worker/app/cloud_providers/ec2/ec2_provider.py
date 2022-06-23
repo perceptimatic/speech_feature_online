@@ -74,6 +74,9 @@ class EC2_Provider(AbstractContextManager):
             )
             self._needs_provision = True
             instance = _response["Instances"][0]
+            # for now we'll wait b/c there's a slight lag evidently, but we'll want to replace these with Waiters:
+            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Waiter.InstanceExists
+            sleep(5)
         return instance
 
     def _wait_for_connection(self):

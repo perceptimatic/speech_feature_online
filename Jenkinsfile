@@ -55,7 +55,7 @@ pipeline {
             steps {
                 dir('worker') {
                     script {
-                        docker.build('sfo-worker:dev')
+                        docker.build 'sfo-worker:dev', '--build-arg USER_UID=1001 .'
                         sh "docker run --rm --entrypoint='' sfo-worker:dev black --check app"
                         sh "docker run --entrypoint='' sfo-worker:dev pytest"
                         withCredentials([

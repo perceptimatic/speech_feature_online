@@ -86,6 +86,8 @@ services:
     restart: "no"
     # we don't want this to actually start
     entrypoint: /bin/true
+    volumes:
+      - ./shennong_runner:/code
   flower:
     image: mher/flower
     environment:
