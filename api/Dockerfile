@@ -28,6 +28,8 @@ COPY . .
 
 RUN poetry install --no-root 
 
+RUN chown -R $USER_UID:$USER_GID .
+
 USER $USERNAME
 
 ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
