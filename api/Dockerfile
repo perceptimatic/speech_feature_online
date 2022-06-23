@@ -22,8 +22,7 @@ RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-
     cd /usr/local/bin && \
     chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \ 
     ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false && \
-    mkdir -p $UPLOAD_DIR
+    poetry config virtualenvs.create false
 
 COPY . .
 

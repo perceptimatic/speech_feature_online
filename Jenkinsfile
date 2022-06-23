@@ -14,7 +14,7 @@ pipeline {
             steps {
                 dir('shennong_runner') {
                     script {
-                        docker.build('sfo-shennong-runner:dev')
+                        docker.build('ghcr.io/perceptimatic/sfo-shennong-runner:dev')
                     }
                 }
             }
@@ -75,14 +75,14 @@ pipeline {
             steps {
                 dir('shennong_runner') {
                     script {
-                        docker.build('sfo-shennong-runner:dev')
-                        sh "docker run --rm --entrypoint='' sfo-shennong-runner:dev black --check app"
-                        sh "docker run --entrypoint='' sfo-shennong-runner:dev pytest"
+                        docker.build('ghcr.io/perceptimatic/sfo-shennong-runner:dev')
+                        sh "docker run --rm --entrypoint='' ghcr.io/perceptimatic/sfo-shennong-runner:dev black --check app"
+                        sh "docker run --entrypoint='' ghcr.io/perceptimatic/sfo-shennong-runner:dev pytest"
                         withCredentials([
                             usernamePassword(credentialsId: 'gh-pat', usernameVariable: 'OWNER', passwordVariable: 'PAT')
                         ]) {
                             sh 'echo $PAT | docker login ghcr.io -u $OWNER --password-stdin'
-                            sh "docker tag sfo-shennong-runner:dev ghcr.io/${OWNER}/sfo-shennong-runner:latest"
+                            sh "docker tag ghcr.io/perceptimatic/sfo-shennong-runner:dev ghcr.io/${OWNER}/sfo-shennong-runner:latest"
                             sh "docker push ghcr.io/${OWNER}/sfo-shennong-runner:latest"
                         }
                     }
