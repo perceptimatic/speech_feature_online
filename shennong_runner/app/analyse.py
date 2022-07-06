@@ -1,9 +1,7 @@
-import argparse
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
 from json import loads
-import logging
 from os import mkdir, path
 from posixpath import basename
 from shutil import make_archive, rmtree
@@ -22,7 +20,6 @@ from shennong.postprocessor.cmvn import CmvnPostProcessor
 
 from app.settings import settings as app_settings
 
-logger = logging.getLogger(__name__)
 
 with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
     shennong_schema = loads(f.read())
@@ -97,9 +94,9 @@ class Analyser:
         if postprocessors:
             for pp in postprocessors:
                 pp_key = f"{key}_{pp}"
-                logger.info(f"starting {pp_key} postprocessor")
+                print(f"starting {pp_key} postprocessor")
                 self.collection[pp_key] = self.postprocess(pp, key)
-                logger.info(f"finished {pp_key} postprocessor")
+                print(f"finished {pp_key} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):
@@ -144,7 +141,7 @@ class LocalFileManager(AbstractContextManager):
         """Remove directory and contents from registered temp files"""
 
         def log_error(function, path, excinfo):
-            logger.error(excinfo)
+            print(excinfo)
 
         rmtree(self.tmp_dir, onerror=log_error)
 
@@ -210,12 +207,12 @@ def process_data(jobargs: JobArgs,) -> str:
             collection = FeaturesCollection()
             local_path = manager.load(file_path)
             analyser = Analyser(local_path, channel, collection)
-            logger.info(f"starting {file_path}")
+            print(f"starting {file_path}")
 
             for k, v in analysis_settings.items():
-                logger.info(f"starting {k}")
+                print(f"starting {k}")
                 analyser.process(k, v)
-                logger.info(f"finished {k}")
+                print(f"finished {k}")
             """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
                 https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
@@ -229,7 +226,7 @@ def process_data(jobargs: JobArgs,) -> str:
                 serializer = None
                 outpath = manager.get_tmp_result_path(local_path, res_type)
             analyser.collection.save(outpath, serializer=serializer)
-            logger.info(f"saved {file_path}")
+            print(f"saved {file_path}")
 
         manager.store()
 
@@ -240,7 +237,5 @@ if __name__ == "__main__":
     from sys import argv
 
     analysis_settings = loads(argv[1])
-    print(argv)
-    print(analysis_settings)
     config = JobArgs(**analysis_settings)
     process_data(config)

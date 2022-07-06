@@ -11,22 +11,35 @@ from app.settings import settings
 
 class EC2_Provider(AbstractContextManager):
     def __init__(self):
+        """Set clients and flags. Caller responsible for connecting."""
         self.start = perf_counter()
         self.launch_template_id = settings.LAUNCH_TEMPLATE_ID
         self.ec2_client = boto3.client("ec2")
         self.ec2_resource = boto3.resource("ec2")
         self.ssh_client = None
         self.instance = None
+        self.is_provisioned = False
 
-    def launch_instance(self):
-        """Bring up the instance, connect, and provision"""
-        self.instance = self._get_instance()
-        self.instance.wait_until_exists()
-        self._connect()
-        self._provision()
+    def connect(self):
+        """Bring up instance.
+        This could be a retry after a network or ec2 failure, so we'll go through
+        the steps one by one to avoid errors and redundancy.
+        """
+        if not self.instance:
+            print("bringing up instance....")
+            self.instance = self._get_instance()
+            waiter = self.ec2_client.get_waiter("instance_status_ok")
+            waiter.wait(InstanceIds=[self.instance.id])
+        if not self.ssh_client:
+            print("connecting via ssh....")
+            self.ssh_client = self._connect()
+        if not self.is_provisioned:
+            print("provisioning node....")
+            self._provision()
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Terminate instance and close client connection"""
+        """Terminate instance and close ssh connection"""
         if self.instance:
             self.instance.terminate()
         if self.ssh_client and self.ssh_client.is_connected:
@@ -46,14 +59,11 @@ class EC2_Provider(AbstractContextManager):
         return instances[0]
 
     def _connect(self):
-        print("waiting for instance to come online")
-        waiter = self.ec2_client.get_waiter("instance_status_ok")
-        waiter.wait(InstanceIds=[self.instance.id])
-        # we may need to reload in case public ip was not set
+        """Establish ssh connection"""
+        # we may need to reload in case public ip was not set initially
         self.instance.reload()
-        print("instance online")
         ipaddr = self.instance.public_ip_address
-        self.ssh_client = Connection(
+        return Connection(
             host=ipaddr,
             user="ubuntu",
             connect_kwargs={"key_filename": "/home/worker/.ssh/ec2-private-key.pem"},
@@ -68,6 +78,7 @@ class EC2_Provider(AbstractContextManager):
         self.ssh_client.run(
             f'bash /home/ubuntu/provision.sh {getenv("GITHUB_PAT")} {getenv("GITHUB_OWNER")}'
         )
+        self.is_provisioned = True
 
     def execute(self, command):
         """Run the command on the remote machine"""

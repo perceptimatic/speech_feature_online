@@ -22,10 +22,27 @@ logger = logging.getLogger(__name__)
 
 # https://docs.celeryq.dev/en/stable/userguide/tasks.html#on_failure
 def on_failure(self, exc, task_id, args, kwargs, einfo):
+    # send_failure_email(email, job_id)
     pass
 
 
-@celery_app.task(bind=True, on_failure=on_failure)
+def attempt_connection(node):
+    """Bring up instance and connect, retrying in case of network or incidental errors"""
+    attempts = 0
+    while True:
+        try:
+            node.connect()
+            return node
+        except Exception as e:
+            attempts += 1
+            if attempts < 3:
+                logger.warning("caught exception while connecting, retrying...")
+                continue
+            else:
+                raise e from None
+
+
+@celery_app.task(bind=True, on_failure=on_failure, acks_late=True)
 def process_shennong_job(
     self, config: Dict[str, Any], send_email=True, provider=EC2_Provider
 ):
@@ -41,16 +58,10 @@ def process_shennong_job(
     image = f"ghcr.io/{settings.GITHUB_OWNER}/sfo-shennong-runner:latest"
 
     with provider() as worker_node:
-        try:
-            # don't launch in constructor b/c __exit__ will not fire on error
-            worker_node.launch_instance()
-            worker_node.execute(
-                f"docker run -i --rm -e 'AWS_DEFAULT_REGION={getenv('AWS_DEFAULT_REGION')}' -e 'AWS_SECRET_ACCESS_KEY={getenv('AWS_SECRET_ACCESS_KEY')}' -e 'AWS_ACCESS_KEY_ID={getenv('AWS_ACCESS_KEY_ID')}' {image} '{config_json}'"
-            )
-        except Exception as e:
-            logger.error(e)
-            raise e from None
-            # send_failure_email(email, job_id)
+        attempt_connection(worker_node)
+        worker_node.execute(
+            f"docker run -i --rm -e 'AWS_DEFAULT_REGION={getenv('AWS_DEFAULT_REGION')}' -e 'AWS_SECRET_ACCESS_KEY={getenv('AWS_SECRET_ACCESS_KEY')}' -e 'AWS_ACCESS_KEY_ID={getenv('AWS_ACCESS_KEY_ID')}' {image} '{config_json}'"
+        )
 
     try:
         client.get_object_attributes(
@@ -71,7 +82,4 @@ def process_shennong_job(
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
             logger.error("Can't find key, results not saved!")
-            # todo: error email
-            raise
-        else:
-            raise
+        raise
