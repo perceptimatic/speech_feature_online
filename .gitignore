@@ -14,6 +14,7 @@ dist
 **/*/logs/*
 uploads/*
 api/static/*
+!api/static/processor-schema.json
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
@@ -22,8 +23,6 @@ api/static/*
 benchmarks.md
 .cache
 
-
-processor-schema.json
 !/**/.gitkeep
 
 *.pem

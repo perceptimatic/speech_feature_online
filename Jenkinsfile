@@ -10,22 +10,7 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build Shennong Runner') {
-            steps {
-                dir('shennong_runner') {
-                    script {
-                        docker.build('ghcr.io/perceptimatic/sfo-shennong-runner:dev')
-                    }
-                }
-            }
-        }
-        stage('Build schema') {
-            steps {
-                script {
-                    sh './build-schema.sh'
-                }
-            }
-        }
+
         stage('Test, Build, and Push API') {
             when { changeset 'api/**/*' }
             steps {
@@ -70,7 +55,7 @@ pipeline {
             }
         }
 
-        stage('Test, (Re)Build, and Push Shennong Runner') {
+        stage('Test, Build, and Push Shennong Runner') {
             when { changeset 'shennong_runner/**/*' }
             steps {
                 dir('shennong_runner') {
