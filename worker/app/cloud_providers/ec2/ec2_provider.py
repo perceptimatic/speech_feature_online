@@ -1,16 +1,12 @@
 from contextlib import AbstractContextManager
-from time import sleep, perf_counter
-from logging import getLogger
+from time import perf_counter
 from os import getenv, path
 
 import boto3
 from fabric import Connection
-from paramiko.ssh_exception import NoValidConnectionsError
 from invoke.exceptions import UnexpectedExit
 
 from app.settings import settings
-
-logger = getLogger(__name__)
 
 
 class EC2_Provider(AbstractContextManager):
@@ -18,100 +14,50 @@ class EC2_Provider(AbstractContextManager):
         self.start = perf_counter()
         self.launch_template_id = settings.LAUNCH_TEMPLATE_ID
         self.ec2_client = boto3.client("ec2")
+        self.ec2_resource = boto3.resource("ec2")
         self.ssh_client = None
-        self._needs_provision = False
+        self.instance = None
+
+    def launch_instance(self):
+        """Bring up the instance, connect, and provision"""
         self.instance = self._get_instance()
+        self.instance.wait_until_exists()
         self._connect()
-        if self._needs_provision:
-            self._provision()
+        self._provision()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Terminate instance and close client connection"""
         if self.instance:
-            self.ec2_client.terminate_instances(
-                InstanceIds=[self.instance["InstanceId"]]
-            )
-        if self.ssh_client.is_connected:
+            self.instance.terminate()
+        if self.ssh_client and self.ssh_client.is_connected:
             self.ssh_client.close()
         elapsed = perf_counter() - self.start
         print(f"job finished in {elapsed}")
 
-    def _get_instance_is_running(self):
-        """Check if the instance is running"""
-        instance = self.ec2_client.describe_instances(
-            InstanceIds=[self.instance["InstanceId"]]
-        )
-
-        self.instance = instance["Reservations"][0]["Instances"][0]
-        return self.instance["State"]["Code"] == 16
-
     def _get_instance(self):
-        """Find an instance that matches the corresponding launch template.
-        Prefer running instances; if no running instance, create one.
-        """
-        instances = self.ec2_client.describe_instances(
-            Filters=[
-                {
-                    "Name": "tag:aws:ec2launchtemplate:id",
-                    "Values": [self.launch_template_id],
-                }
-            ]
+        """Spin up an instance according to the launch template."""
+        instances = self.ec2_resource.create_instances(
+            LaunchTemplate={
+                "LaunchTemplateId": self.launch_template_id,
+            },
+            MaxCount=1,
+            MinCount=1,
         )
-        instance = None
-        if instances["Reservations"]:
-            for item in instances["Reservations"][0]["Instances"]:
-                if item["State"]["Name"] == "running":
-                    logger.info("found running node")
-                    instance = item
-                    break
-        if not instance:
-            _response = self.ec2_client.run_instances(
-                LaunchTemplate={
-                    "LaunchTemplateId": self.launch_template_id,
-                },
-                MaxCount=1,
-                MinCount=1,
-            )
-            self._needs_provision = True
-            instance = _response["Instances"][0]
-            # for now we'll wait b/c there's a slight lag evidently, but we'll want to replace these with Waiters:
-            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Waiter.InstanceExists
-            sleep(5)
-        return instance
-
-    def _wait_for_connection(self):
-        """Poll until ssh server comes online"""
-        tries = 0
-        while tries < 5:
-            try:
-                logger.info("waiting for ssh to come online....")
-                self.ssh_client.open()
-            except NoValidConnectionsError:
-                sleep(3)
-                tries += 1
-            else:
-                break
-        if tries == 5:
-            raise Exception("Could not connect to SSH!")
-        return True
+        return instances[0]
 
     def _connect(self):
-        tries = 0
-        while not self._get_instance_is_running() and tries < 10:
-            logger.info("waiting for node to come online...")
-            sleep(5)
-            tries += 1
-        if not self._get_instance_is_running():
-            raise Exception("Failed to bring up instance!")
-
-        logger.info("instance is up!")
-        ipaddr = self.instance["PublicIpAddress"]
+        print("waiting for instance to come online")
+        waiter = self.ec2_client.get_waiter("instance_status_ok")
+        waiter.wait(InstanceIds=[self.instance.id])
+        # we may need to reload in case public ip was not set
+        self.instance.reload()
+        print("instance online")
+        ipaddr = self.instance.public_ip_address
         self.ssh_client = Connection(
             host=ipaddr,
             user="ubuntu",
             connect_kwargs={"key_filename": "/home/worker/.ssh/ec2-private-key.pem"},
         )
-        self._wait_for_connection()
 
     def _provision(self):
         """Provision execution environment"""

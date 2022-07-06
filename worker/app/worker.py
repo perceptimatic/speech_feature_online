@@ -42,6 +42,8 @@ def process_shennong_job(
 
     with provider() as worker_node:
         try:
+            # don't launch in constructor b/c __exit__ will not fire on error
+            worker_node.launch_instance()
             worker_node.execute(
                 f"docker run -i --rm -e 'AWS_DEFAULT_REGION={getenv('AWS_DEFAULT_REGION')}' -e 'AWS_SECRET_ACCESS_KEY={getenv('AWS_SECRET_ACCESS_KEY')}' -e 'AWS_ACCESS_KEY_ID={getenv('AWS_ACCESS_KEY_ID')}' {image} '{config_json}'"
             )
