@@ -36,6 +36,7 @@ def attempt_connection(node):
         except Exception as e:
             attempts += 1
             if attempts < 3:
+                logger.error(e)
                 logger.warning("caught exception while connecting, retrying...")
                 continue
             else:

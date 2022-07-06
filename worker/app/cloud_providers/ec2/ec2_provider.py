@@ -28,8 +28,6 @@ class EC2_Provider(AbstractContextManager):
         if not self.instance:
             print("bringing up instance....")
             self.instance = self._get_instance()
-            waiter = self.ec2_client.get_waiter("instance_status_ok")
-            waiter.wait(InstanceIds=[self.instance.id])
         if not self.ssh_client:
             print("connecting via ssh....")
             self.ssh_client = self._connect()
@@ -56,6 +54,8 @@ class EC2_Provider(AbstractContextManager):
             MaxCount=1,
             MinCount=1,
         )
+        waiter = self.ec2_client.get_waiter("instance_status_ok")
+        waiter.wait(InstanceIds=[instances[0].id])
         return instances[0]
 
     def _connect(self):
