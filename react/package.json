@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@mui/x-data-grid": "^5.13.0",
     "aws-sdk": "^2.1097.0",
     "axios": "^0.26.1",
     "react": "^17.0.2",

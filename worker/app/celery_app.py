@@ -5,15 +5,10 @@ from os import path
 import celery
 from celery import Celery
 
-from app.settings import settings
 
 celery_app = Celery("speech_features")
 
 celery_app.config_from_object("app.celeryconfig")
-
-celery_app.conf.task_routes = {
-    "app.worker.process_shennong_job": {"queue": settings.PROCESSING_QUEUE},
-}
 
 
 @celery.signals.after_setup_logger.connect

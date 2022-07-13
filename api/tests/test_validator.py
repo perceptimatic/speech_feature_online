@@ -13,7 +13,7 @@ top_level_valid = {
     "channel": 1,
     "files": ["abc"],
     "res": ".csv",
-    "email": "test@example.com",
+    "email": "admin@example.com",
 }
 
 

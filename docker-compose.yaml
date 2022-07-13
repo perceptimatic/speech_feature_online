@@ -15,6 +15,7 @@ services:
       - FAST_API_DEFAULT_ADMIN_PASSWORD
       - FAST_API_DEBUG
       - JWT_SECRET
+      - NOTIFICATION_QUEUE
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
@@ -24,7 +25,7 @@ services:
       - ./api:/code
     networks:
       - speech-feature
-  worker:
+  worker: &queue-worker
     image: ghcr.io/perceptimatic/sfo-worker:latest
     restart: always
     depends_on:
@@ -40,6 +41,7 @@ services:
       - GITHUB_OWNER
       - GITHUB_PAT
       - LAUNCH_TEMPLATE_ID
+      - NOTIFICATION_QUEUE
       - POSTGRES_DB
       - POSTGRES_HOST_AUTH_METHOD
       - POSTGRES_PASSWORD
@@ -58,6 +60,12 @@ services:
       - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
     networks:
       - speech-feature
+  notification-worker: 
+    <<: *queue-worker
+    volumes:
+      - ./worker:/code
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE}" ]
+
   react:
     image: node:latest
     volumes:

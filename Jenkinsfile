@@ -104,7 +104,7 @@ pipeline {
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
-                        sh 'rsync -avh -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" ./react/dist jenkins@$HOST:$HOST_PATH/react/'
+                        sh 'rsync -avh  --delete -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" ./react/dist jenkins@$HOST:$HOST_PATH/react/'
                     }
             }
         }

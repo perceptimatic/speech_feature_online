@@ -24,6 +24,7 @@ def create_admin_user():
             "username": "admin",
             "email": "admin@example.com",
             "password": pwd_context.hash(password),
+            "active": True,
         }
     )
     db.add(admin_user)

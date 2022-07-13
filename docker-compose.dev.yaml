@@ -17,7 +17,7 @@ services:
       - POSTGRES_USER
       - PROCESSING_QUEUE
     entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
-  worker:
+  worker: &queue-worker
     image: ghcr.io/perceptimatic/sfo-worker:latest
     restart: always
     networks:
@@ -45,6 +45,9 @@ services:
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:
       - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
+  notification-worker:
+    <<: *queue-worker
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE}" ]
   redis:
     image: redis:latest
     networks:

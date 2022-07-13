@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Button, Grid, Typography } from '@mui/material';
+import { getEntries } from '../JobForm';
 import Modal from './Modal';
-import { getEntries } from './JobForm';
 
 interface SubmissionErrorModalProps {
     code?: number;

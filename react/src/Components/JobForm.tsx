@@ -36,11 +36,11 @@ export const getValues = <T,>(obj: T) => Object.values(obj) as T[keyof T][];
 export const getEntries = <T,>(obj: T) =>
     Object.entries(obj) as [keyof T, T[keyof T]][];
 
-const makeBaseForm = (): JobConfig => ({
+const makeBaseForm = (email: string): JobConfig => ({
     analyses: {},
     channel: globalDisplayFields.find(f => f.name === 'channel')!
         .default as string,
-    email: '',
+    email,
     files: [],
     res: globalDisplayFields.find(f => f.name === 'res')!.default as string,
 });
@@ -53,7 +53,7 @@ export const jobFormReducer: Reducer<JobConfig, Action> = (
         case 'update':
             return { ...state, ...payload };
         case 'clear':
-            return makeBaseForm();
+            return makeBaseForm(state.email);
         default:
             throw new Error();
     }
@@ -501,4 +501,5 @@ export const analysisDisplayFields: FieldDisplaySchema = {
     },
 };
 
-export const useFormReducer = () => useReducer(jobFormReducer, makeBaseForm());
+export const useFormReducer = (email: string) =>
+    useReducer(jobFormReducer, makeBaseForm(email));

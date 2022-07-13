@@ -60,3 +60,32 @@ export interface ProcessorSchema extends PostprocessorSchema {
     required_postprocessors: string[];
     valid_postprocessors: string[];
 }
+
+export interface User {
+    created: string;
+    email: string;
+    id: number;
+    roles: Role[];
+    username: string;
+}
+
+interface Role {
+    id: number;
+    role: string;
+}
+
+export interface Job {
+    created: string;
+    task_info: JobInfo | null;
+    taskmeta_id: string;
+    user_id: number;
+}
+
+interface JobInfo {
+    id: number;
+    task_id: string;
+    status: string;
+    result: string;
+    date_done: string;
+    traceback: string;
+}

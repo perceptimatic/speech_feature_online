@@ -1,5 +1,6 @@
 from json import dumps
 import logging
+from time import sleep
 from typing import Any, Dict
 import uuid
 from os import getenv
@@ -43,16 +44,45 @@ def attempt_connection(node):
                 raise e from None
 
 
-@celery_app.task(bind=True, on_failure=on_failure, acks_late=True)
-def process_shennong_job(
-    self, config: Dict[str, Any], send_email=True, provider=EC2_Provider
+@celery_app.task()
+def test(test_arg: str):
+    sleep_time = 5
+    print(f"sleeping {sleep_time}")
+    sleep(sleep_time)
+    return test_arg
+
+
+@celery_app.task()
+def verify_user_email(email_addr: str, verification_code: str):
+    """Verify user email"""
+    template = jinja_env.get_template("verify-email.html")
+    html = template.render(
+        verification_code=verification_code,
+    )
+    mailer = SMTPService("Complete Your SFO signup", email_addr, html)
+    mailer.send()
+    return "Email sent"
+
+
+@celery_app.task()
+def notify_job_complete(
+    result_url: str,
+    email_address: str,
 ):
+    template = jinja_env.get_template("success.html")
+    html = template.render(download_link=result_url, from_email="example@example.net")
+    mailer = SMTPService("Your SFO Results", email_address, html)
+    mailer.send()
+    return result_url
+
+
+@celery_app.task(bind=True, on_failure=on_failure)
+def process_shennong_job(self, config: Dict[str, Any], provider=EC2_Provider):
     """Run the shennong job."""
 
     client = boto3.client("s3")
     self.provider = provider
     save_path = f"{uuid.uuid4().hex}.zip"
-    email = config.pop("email")
     config["save_path"] = save_path
     config["bucket"] = settings.BUCKET_NAME
     config_json = dumps(config)
@@ -68,17 +98,11 @@ def process_shennong_job(
         client.get_object_attributes(
             Bucket=settings.BUCKET_NAME, Key=save_path, ObjectAttributes=["ObjectSize"]
         )
-        url = client.generate_presigned_url(
+        return client.generate_presigned_url(
             "get_object",
             Params={"Bucket": settings.BUCKET_NAME, "Key": save_path},
             ExpiresIn=60 * 60 * 168,
         )
-
-        if send_email:
-            template = jinja_env.get_template("success.html")
-            html = template.render(download_link=url, from_email="example@example.net")
-            mailer = SMTPService("Your SFO Results", email, html)
-            mailer.send()
 
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":

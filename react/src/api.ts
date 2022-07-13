@@ -1,7 +1,34 @@
 import axios from 'axios';
 import AWS from 'aws-sdk';
 import { AwsCredentials } from 'aws-sdk/clients/gamelift';
-import { JobConfig } from './types';
+import { Job, JobConfig, User } from './types';
+
+const axiosClient = axios.create();
+
+axiosClient.interceptors.request.use(config => {
+    if (localStorage.getItem('jwt')) {
+        config.headers = {
+            ...config.headers,
+            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+        };
+    }
+    return config;
+});
+
+axiosClient.interceptors.response.use(
+    response => response,
+    error => {
+        if (error?.response?.status === 401) {
+            if (localStorage.getItem('jwt')) {
+                localStorage.removeItem('jwt');
+            }
+            if (window.location.pathname !== '/login') {
+                window.location.pathname = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 /**
  * @class ProgressIncrement
@@ -49,7 +76,7 @@ const getTempCredentials = async () => {
         secretAccessKey = '',
         sessionToken = '';
     try {
-        const result = await axios.get<{
+        const result = await axiosClient.get<{
             Credentials: AwsCredentials;
         }>(process.env.REACT_TMP_CRED_ENDPOINT!);
         accessKeyId = result.data.Credentials.AccessKeyId!;
@@ -139,5 +166,31 @@ export const postFiles = (
 ) => postFilesToS3(files, progressCb);
 
 export const submitForm = (formData: JobConfig) => {
-    return axios.post('/api/shennong-job', formData);
+    return axiosClient.post('/api/shennong-job', formData);
 };
+
+export const login = async (creds: { email: string; password: string }) =>
+    axiosClient.post<{ access_token: string }>('/api/token', creds);
+
+export const register = async (info: {
+    email: string;
+    password: string;
+    username: string;
+}) => axiosClient.post<User>('/api/users', info);
+
+export const fetchCurrentUser = async () =>
+    axiosClient.get<User>('/api/users/current');
+
+export const fetchUserJobs = async (userId: number) =>
+    axiosClient.get<Job[]>(`/api/users/${userId}/tasks`);
+
+export const verifyRegistration = async (
+    email: string,
+    verification_code: string
+) =>
+    axiosClient.post<{ access_token: string }>(
+        `/api/users/${email}/verification_code`,
+        {
+            verification_code,
+        }
+    );

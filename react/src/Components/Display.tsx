@@ -15,15 +15,18 @@ const LinkBehavior = React.forwardRef<
     return <RouterLink ref={ref} to={href} {...other} />;
 });
 
-export const MenuLink: React.FC<{ href: string }> = ({ children, href }) => (
+export const MenuLink: React.FC<{ href: string; onClick?: () => void }> = ({
+    children,
+    href,
+    onClick,
+}) => (
     <MuiLink
         sx={theme => ({
-            color: theme.palette.getContrastText(
-                theme.palette.primary.contrastText
-            ),
+            color: theme.palette.primary.contrastText,
         })}
         href={href}
         component={LinkBehavior}
+        onClick={onClick}
     >
         {children}
     </MuiLink>

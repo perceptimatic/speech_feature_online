@@ -1,0 +1,35 @@
+<style type="text/css">
+  @font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    src: local(""),
+      url("../fonts/open-sans-v28-latin-regular.woff2") format("woff2");
+  }
+  .body {
+    width: 90%;
+    margin: auto;
+    font-family: "Open Sans", "Helvetica", sans-serif;
+    font-size: 14pt;
+    color: grey;
+  }
+  a:link {
+    color: #075d72;
+    text-decoration: underline;
+  }
+  a:visited {
+    color: #542a95;
+    text-decoration: none;
+  }
+  a:hover {
+    color: #b40057;
+    text-decoration: underline;
+  }
+</style>
+
+<div class="body">
+  <p>Thank you for singing up with Speech Features Online!</p>
+  <p>Your validation code: {{ verification_code }}</p>
+
+  <p>Sincerely,</p>
+  <p>The SFO Team</p>
+</div>
