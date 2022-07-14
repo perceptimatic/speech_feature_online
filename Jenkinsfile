@@ -3,6 +3,8 @@ pipeline {
     environment {
         HOST_PATH = credentials('host-path')
         HOST = credentials('host')
+        AWS_DEFAULT_REGION = credentials('AWS_DEFAULT_REGION')
+        BUCKET_NAME = credentials('BUCKET_NAME')
     }
     stages {
         stage('Clone repository') {
@@ -80,10 +82,9 @@ pipeline {
             agent {
                 docker {
                     image 'node:latest'
-                    args '-e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
-                          -e BUCKET_NAME=$BUCKET_NAME \
-                          -e REACT_TMP_CRED_ENDPOINT=$REACT_TMP_CRED_ENDPOINT \
-                          -e STORAGE_DRIVER=$STORAGE_DRIVER'
+                    args '-e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
+                          -e BUCKET_NAME=${BUCKET_NAME} \
+                          -v /home/ubuntu/react-assets:$WORKSPACE/react/dist'
                 }
             }
             steps {
@@ -100,17 +101,15 @@ pipeline {
         }
         stage('Deploy React') {
             when { changeset 'react/**/*' }
-            agent any
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
-                        sh 'rsync -avh  --delete -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" ./react/dist jenkins@$HOST:$HOST_PATH/react/'
+                        sh 'rsync -avh  --delete -e "ssh -o StrictHostKeyChecking=no -i $SSHKEY" /home/ubuntu/react-assets/ jenkins@$HOST:$HOST_PATH/react/dist/'
                     }
             }
         }
         stage('Deploy API') {
             when { changeset 'api/**/*' }
-            agent any
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
@@ -120,7 +119,6 @@ pipeline {
         }
         stage('Deploy worker') {
             when { changeset 'worker/**/*' }
-            agent any
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {

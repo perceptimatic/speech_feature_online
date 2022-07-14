@@ -59,9 +59,6 @@ module.exports = {
             'process.env.STORAGE_DRIVER': JSON.stringify(
                 process.env.STORAGE_DRIVER
             ),
-            'process.env.REACT_TMP_CRED_ENDPOINT': JSON.stringify(
-                process.env.REACT_TMP_CRED_ENDPOINT
-            ),
         }),
     ],
 };

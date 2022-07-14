@@ -78,7 +78,7 @@ const getTempCredentials = async () => {
     try {
         const result = await axiosClient.get<{
             Credentials: AwsCredentials;
-        }>(process.env.REACT_TMP_CRED_ENDPOINT!);
+        }>('/api/temp-creds');
         accessKeyId = result.data.Credentials.AccessKeyId!;
         secretAccessKey = result.data.Credentials.SecretAccessKey!;
         sessionToken = result.data.Credentials.SessionToken!;
