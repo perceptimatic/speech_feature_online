@@ -10,6 +10,8 @@ from sqlalchemy import (
     String,
     Table,
 )
+
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Session
 
 from app.database import Base
@@ -30,7 +32,7 @@ class UserTask(Base):
     """
 
     __tablename__ = "tasks_users"
-    created = Column(DateTime, nullable=False, default=datetime.now())
+    created = Column(DateTime, nullable=False, default=func.now())
     id = Column(Integer, primary_key=True, index=True)
     taskmeta_id = Column(String(255), nullable=True, unique=True)
     user_id = Column(Integer, ForeignKey("users.id"))
