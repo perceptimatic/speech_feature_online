@@ -69,10 +69,9 @@ const Label: React.FC<{
     } else {
         return (
             <>
-                <Box sx={{ display: 'flex' }}>
+                <Grid container flexWrap="nowrap">
                     <Typography>{labelText}</Typography>
-                    <Box sx={{ fontSize: '10px' }}>
-                        &nbsp;
+                    <Box sx={{ fontSize: '10px', paddingLeft: 1 }}>
                         <QuestionMark
                             onClick={e => {
                                 e.preventDefault();
@@ -81,7 +80,7 @@ const Label: React.FC<{
                             fontSize="inherit"
                         />
                     </Box>
-                </Box>
+                </Grid>
 
                 <Popover
                     onClose={() => setAnchor(undefined)}
@@ -336,8 +335,8 @@ const PostProcessorContainer: React.FC = ({ children }) => {
                 width: '90%',
             }}
         >
-            <Typography>
-                <em>Post-processing:</em>&nbsp;
+            <Typography sx={{ marginRight: 1 }}>
+                <em>Post-processing:</em>
             </Typography>
             {children}
         </Box>
