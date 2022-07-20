@@ -84,8 +84,7 @@ class EC2_Provider(AbstractContextManager):
     def execute(self, command):
         """Run the command on the remote machine"""
         try:
-            result = self.ssh_client.run(command)
-            print(result.stdout)
+            self.ssh_client.run(command)
         except UnexpectedExit as e:
             # if we're dealing with a python error here, then stderr is a stringified traceback
             # so the result will contain 2 tracebacks: the string "message" and the traceback of this exception

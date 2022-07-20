@@ -2,6 +2,7 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
 from json import loads
+import logging
 from os import mkdir, path
 from posixpath import basename
 from shutil import make_archive, rmtree
@@ -19,6 +20,13 @@ from shennong.processor.pitch_kaldi import KaldiPitchPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 
 from app.settings import settings as app_settings
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
@@ -94,9 +102,9 @@ class Analyser:
         if postprocessors:
             for pp in postprocessors:
                 pp_key = f"{key}_{pp}"
-                print(f"starting {pp_key} postprocessor")
+                logger.info(f"starting {pp_key} postprocessor")
                 self.collection[pp_key] = self.postprocess(pp, key)
-                print(f"finished {pp_key} postprocessor")
+                logger.info(f"finished {pp_key} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):
@@ -141,7 +149,7 @@ class LocalFileManager(AbstractContextManager):
         """Remove directory and contents from registered temp files"""
 
         def log_error(function, path, excinfo):
-            print(excinfo)
+            logger.info(excinfo)
 
         rmtree(self.tmp_dir, onerror=log_error)
 
@@ -207,12 +215,12 @@ def process_data(jobargs: JobArgs,) -> str:
             collection = FeaturesCollection()
             local_path = manager.load(file_path)
             analyser = Analyser(local_path, channel, collection)
-            print(f"starting {file_path}")
+            logger.info(f"starting {file_path}")
 
             for k, v in analysis_settings.items():
-                print(f"starting {k}")
+                logger.info(f"starting {k}")
                 analyser.process(k, v)
-                print(f"finished {k}")
+                logger.info(f"finished {k}")
             """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
                 https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
@@ -226,7 +234,7 @@ def process_data(jobargs: JobArgs,) -> str:
                 serializer = None
                 outpath = manager.get_tmp_result_path(local_path, res_type)
             analyser.collection.save(outpath, serializer=serializer)
-            print(f"saved {file_path}")
+            logger.info(f"saved {file_path}")
 
         manager.store()
 

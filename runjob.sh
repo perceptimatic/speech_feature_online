@@ -10,3 +10,4 @@ IMAGE="ghcr.io/perceptimatic/sfo-shennong-runner:latest"
 CONFIG=$(cat ./worker/app/tests/fixtures/sample-request.json | jq 'del(.email)' | jq -r --arg BUCKET "$BUCKET_NAME" '. + {"bucket" : $BUCKET, save_path: "abc123.zip"}') 
 
 docker run -it -e "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}" -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" --rm "${IMAGE}" "${CONFIG}"
+#docker-compose run --rm --entrypoint='python3 -m app.analyse'  -e "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}" -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" shennong-runner "${CONFIG}"
