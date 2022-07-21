@@ -1,6 +1,6 @@
 import 'typeface-roboto';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { HomePage } from './Pages';
+import BasePage from './Pages/BasePage';
 
-ReactDOM.render(<HomePage />, document.getElementById('root'));
+ReactDOM.render(<BasePage />, document.getElementById('root'));

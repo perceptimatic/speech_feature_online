@@ -27,7 +27,6 @@ module.exports = {
         ],
     },
     mode: 'production',
-    devtool: 'inline-source-map',
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],
         /*https://github.com/facebook/create-react-app/issues/11756*/

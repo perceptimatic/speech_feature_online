@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { useFetchCurrentUser, useLogin } from '../hooks';
 import { Page } from '../Components';
-import { UserContext } from './HomePage';
+import { UserContext } from './BasePage';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');

@@ -15,7 +15,7 @@ import {
     useVerifyRegistration,
 } from '../hooks';
 import { Page, VerifyRegistrationModal } from '../Components';
-import { UserContext } from './HomePage';
+import { UserContext } from './BasePage';
 
 const RegistrationPage: React.FC = () => {
     const [email, setEmail] = useState('');

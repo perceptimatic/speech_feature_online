@@ -52,7 +52,7 @@ import {
     CommonSchema,
     JobConfig,
 } from '../types';
-import { UserContext } from './HomePage';
+import { UserContext } from './BasePage';
 
 enum FailureType {
     TOO_LARGE = 'The file exceeds 50MB maxmimum size. Please compress or split your samples into smaller files.',

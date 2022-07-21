@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { AppBar, Grid, Toolbar, Typography } from '@mui/material';
-import { UserContext } from '../Pages/HomePage';
+import { UserContext } from '../Pages/BasePage';
 import { MenuLink } from '.';
 
 const Header: React.FC = () => {

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { UserContext } from '../Pages/HomePage';
+import { UserContext } from '../Pages/BasePage';
 import useFetchCurrentUser from './useFetchCurrentUser';
 
 const useAuth = (role?: string) => {

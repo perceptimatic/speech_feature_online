@@ -4,7 +4,7 @@ import { GridColDef, DataGrid } from '@mui/x-data-grid';
 import { Page } from '../Components';
 import { useFetchUserJobs } from '../hooks';
 import { Job } from '../types';
-import { UserContext } from './HomePage';
+import { UserContext } from './BasePage';
 
 const formatDate = (date: string) => {
     const offset = new Date(date).getTimezoneOffset();
