@@ -31,7 +31,7 @@ const Header: React.FC = () => {
                             <Grid item>
                                 <MenuLink href="about">About</MenuLink>
                             </Grid>
-                            {user && (
+                            {user ? (
                                 <>
                                     <Grid item>
                                         <Typography>
@@ -52,6 +52,10 @@ const Header: React.FC = () => {
                                         </MenuLink>
                                     </Grid>
                                 </>
+                            ) : (
+                                <Grid item>
+                                    <MenuLink href="/login">Log In</MenuLink>
+                                </Grid>
                             )}
                         </Grid>
                     </Grid>

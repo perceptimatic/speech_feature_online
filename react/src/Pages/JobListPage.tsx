@@ -76,13 +76,8 @@ const JobListPage: React.FC = () => {
     }, [user, getUserJobs]);
 
     return (
-        <Page>
+        <Page title="Job History">
             <Grid container spacing={2} direction="column">
-                <Grid item>
-                    <Typography align="center" variant="h3">
-                        Job History
-                    </Typography>
-                </Grid>
                 <Grid item>
                     {jobs && jobs.length ? (
                         <Box sx={{ height: 500, width: '100%' }}>

@@ -116,9 +116,9 @@ const RegistrationPage: React.FC = () => {
                                         fullWidth
                                         helperText={
                                             username.length < 5 &&
-                                            'Username must be at least 5 characters'
+                                            'Display name must be at least 5 characters'
                                         }
-                                        label={'username'}
+                                        label={'display name'}
                                         onChange={e =>
                                             setUsername(e.currentTarget.value)
                                         }

@@ -10,6 +10,7 @@ import {
 import { useAuth } from './hooks';
 import { Header, LoadingOverlay } from './Components';
 
+const AboutPage = lazy(() => import('./Pages/AboutPage'));
 const FormPage = lazy(() => import('./Pages/FormPage'));
 const JobListPage = lazy(() => import('./Pages/JobListPage'));
 const LoginPage = lazy(() => import('./Pages/LoginPage'));
@@ -20,6 +21,7 @@ const Routes: React.FC = () => (
         <Header />
         <Suspense fallback={<LoadingOverlay open={true} />}>
             <RouterRoutes>
+                <Route path="/about" element={<AboutPage />} />
                 <Route
                     path="/"
                     element={

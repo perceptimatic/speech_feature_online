@@ -278,11 +278,10 @@ const FormPage: React.FC = () => {
     };
 
     return (
-        <Page>
+        <Page title="Run an Analysis">
             <Grid container direction="column" alignItems="flex-start">
                 <Grid item>
                     <Box>
-                        <Typography variant="h3">Run an analysis</Typography>
                         <Typography>
                             Use the controls below to upload an audio file to be
                             processed by the Shennong software. The results will
