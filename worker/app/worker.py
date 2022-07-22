@@ -66,7 +66,6 @@ def delete_expired_files(continuation_token=None):
         delete_expired_files(continuation_token)
 
 
-
 # https://docs.celeryq.dev/en/stable/userguide/tasks.html#on_failure
 def on_failure(self, exc, task_id, args, kwargs, einfo):
     # send_failure_email(email, job_id) (?)
