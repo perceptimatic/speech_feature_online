@@ -30,7 +30,6 @@ if __name__ == "__main__":
     if not exists(audio_path):
         raise FileNotFoundError(f"audio file not found at {audio_path}!")
 
-    resource = boto3.resource("s3")
     client = boto3.client("s3")
     bucket = app_settings.BUCKET_NAME
     filename = f"tests/{basename(audio_path)}"

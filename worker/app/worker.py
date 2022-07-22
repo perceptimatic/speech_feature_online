@@ -1,9 +1,14 @@
+from boto3 import client
+from celery.schedules import crontab
+import datetime
+from io import StringIO
 from json import dumps
 import logging
 from time import sleep
 from typing import Any, Dict
 import uuid
 from os import getenv
+
 
 import boto3
 from botocore.exceptions import ClientError
@@ -21,9 +26,50 @@ jinja_env = Environment(
 logger = logging.getLogger(__name__)
 
 
+@celery_app.task
+def delete_expired_files(continuation_token=None):
+    s3 = client("s3")
+
+    kwargs = {"Bucket": settings.BUCKET_NAME}
+
+    if continuation_token:
+        kwargs["ContinuationToken"] = continuation_token
+
+    response = s3.list_objects_v2(**kwargs)
+    continuation_token = response.get("NextContinuationToken")
+    expired = [
+        {"Key": obj["Key"]}
+        for obj in response["Contents"]
+        # compare utc timestamps, links expire after 7 days so we'll give 1 day buffer
+        if (
+            datetime.datetime.now(datetime.timezone.utc)
+            - obj["LastModified"].replace(tzinfo=datetime.timezone.utc)
+        ).days
+        > 8
+    ]
+    s3.delete_objects(Bucket=settings.BUCKET_NAME, Delete={"Objects": expired})
+
+    msg = f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}"
+
+    f = StringIO()
+    f.write(msg)
+
+    s3.put_object(
+        Bucket=settings.BUCKET_NAME,
+        Key="deletion-history",
+        Body=f.getvalue(),
+    )
+
+    f.close()
+
+    if continuation_token:
+        delete_expired_files(continuation_token)
+
+
+
 # https://docs.celeryq.dev/en/stable/userguide/tasks.html#on_failure
 def on_failure(self, exc, task_id, args, kwargs, einfo):
-    # send_failure_email(email, job_id)
+    # send_failure_email(email, job_id) (?)
     pass
 
 

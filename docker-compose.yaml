@@ -64,8 +64,8 @@ services:
     <<: *queue-worker
     volumes:
       - ./worker:/code
-    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE}" ]
-
+    # celery is the queue that beat-scheduler pushes to
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE},celery" ]
   react:
     image: node:latest
     volumes:

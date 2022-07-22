@@ -29,3 +29,5 @@ benchmarks.md
 
 shennong_runner/app/tests/fixtures/**/*
 !shennong_runner/app/tests/fixtures/mono-sample.wav
+
+celerybeat-schedule

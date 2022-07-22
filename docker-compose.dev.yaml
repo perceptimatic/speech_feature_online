@@ -49,7 +49,15 @@ services:
       - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
   notification-worker:
     <<: *queue-worker
-    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE}" ]
+    volumes:
+      - ./worker:/code
+    # celery is the queue that beat-scheduler pushes to
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE},celery" ]
+  beat-scheduler:
+    <<: *queue-worker
+    volumes:
+      - ./worker:/code
+    entrypoint: [ "celery", "-A", "app.worker", "beat"]
   redis:
     image: redis:latest
     networks:
