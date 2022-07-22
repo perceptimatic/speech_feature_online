@@ -28,10 +28,6 @@ pipeline {
                             sh "docker tag sfo-api:dev ghcr.io/${OWNER}/sfo-api:latest"
                             sh "docker push ghcr.io/${OWNER}/sfo-api:latest"
                         }
-                        withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
-                                             keyFileVariable: 'SSHKEY')]) {
-                            sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh api" '
-                                             }
                     }
                 }
             }
@@ -122,7 +118,7 @@ pipeline {
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
-                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh worker" '
+                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh worker notification-worker beat-scheduler" '
                     }
             }
         }

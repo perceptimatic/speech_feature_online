@@ -18,7 +18,9 @@ const Header: React.FC = () => {
                     <Grid container alignItems="center" sx={{ padding: 1 }}>
                         <Grid container item xs={6}>
                             <Typography variant="h5">
-                                Speech Feature Online
+                                <MenuLink href="/">
+                                    Speech Feature Online
+                                </MenuLink>
                             </Typography>
                         </Grid>
                         <Grid
