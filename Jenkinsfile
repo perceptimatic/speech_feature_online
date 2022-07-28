@@ -109,16 +109,16 @@ pipeline {
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
-                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh api" '
+                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-api.sh" '
                     }
             }
         }
-        stage('Deploy worker') {
+        stage('Deploy workers') {
             when { changeset 'worker/**/*' }
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
-                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-dev.sh worker notification-worker beat-scheduler" '
+                        sh 'ssh -o StrictHostKeyChecking=no -i $SSHKEY jenkins@$HOST "cd $HOST_PATH; bash deploy-workers.sh" '
                     }
             }
         }
