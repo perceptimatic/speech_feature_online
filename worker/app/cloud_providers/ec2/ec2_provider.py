@@ -1,12 +1,27 @@
+""" Module for bringing up an EC2 instance and connecting to Docker API. Assumes that the instance is running Ubuntu."""
+
 from contextlib import AbstractContextManager
+from os import path
 from time import perf_counter
-from os import getenv, path
 
 import boto3
-from fabric import Connection
-from invoke.exceptions import UnexpectedExit
+import docker
+import paramiko
 
 from app.settings import settings
+
+
+def update_known_hosts(host: str):
+    """Add instance to known_hosts, creating file if necessary"""
+    KNOWN_HOSTS_PATH = path.expanduser("~/.ssh/known_hosts")
+    open(KNOWN_HOSTS_PATH, "a").close()
+    transport = paramiko.Transport(host)
+    transport.connect()
+    key = transport.get_remote_server_key()
+    transport.close()
+    hk = paramiko.HostKeys(KNOWN_HOSTS_PATH)
+    hk.add(host, key.get_name(), key)
+    hk.save(KNOWN_HOSTS_PATH)
 
 
 class EC2_Provider(AbstractContextManager):
@@ -16,9 +31,8 @@ class EC2_Provider(AbstractContextManager):
         self.launch_template_id = settings.LAUNCH_TEMPLATE_ID
         self.ec2_client = boto3.client("ec2")
         self.ec2_resource = boto3.resource("ec2")
-        self.ssh_client = None
         self.instance = None
-        self.is_provisioned = False
+        self.docker_client = None
 
     def connect(self):
         """Bring up instance.
@@ -31,20 +45,17 @@ class EC2_Provider(AbstractContextManager):
             # we wait here so self.instance is assigned immediately and can be properly terminated on error
             waiter = self.ec2_client.get_waiter("instance_status_ok")
             waiter.wait(InstanceIds=[self.instance.id])
-        if not self.ssh_client:
-            print("connecting via ssh....")
-            self.ssh_client = self._connect()
-        if not self.is_provisioned:
-            print("provisioning node....")
-            self._provision()
+        if not self.docker_client:
+            print("connecting to docker....")
+            self.docker_client = self._connect_docker()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Terminate instance and close ssh connection"""
+        """Terminate instance and close connection"""
         if self.instance:
             self.instance.terminate()
-        if self.ssh_client and self.ssh_client.is_connected:
-            self.ssh_client.close()
+        if self.docker_client:
+            self.docker_client.close()
         elapsed = perf_counter() - self.start
         print(f"job finished in {elapsed}")
 
@@ -59,34 +70,13 @@ class EC2_Provider(AbstractContextManager):
         )
         return instances[0]
 
-    def _connect(self):
-        """Establish ssh connection"""
+    def _connect_docker(self):
+        """Establish connection with docker daemon"""
         # we may need to reload in case public ip was not set initially
         self.instance.reload()
         ipaddr = self.instance.public_ip_address
-        return Connection(
-            host=ipaddr,
-            user="ubuntu",
-            connect_kwargs={"key_filename": "/home/worker/.ssh/ec2-private-key.pem"},
+        update_known_hosts(ipaddr)
+        return docker.DockerClient(
+            base_url=f"ssh://ubuntu@{ipaddr}",
+            use_ssh_client=True,
         )
-
-    def _provision(self):
-        """Provision execution environment"""
-        self.ssh_client.put(
-            path.join(path.dirname(__file__), "provision.sh"),
-            "/home/ubuntu/provision.sh",
-        )
-        self.ssh_client.run(
-            f'bash /home/ubuntu/provision.sh {getenv("GITHUB_PAT")} {getenv("GITHUB_OWNER")}'
-        )
-        self.is_provisioned = True
-
-    def execute(self, command):
-        """Run the command on the remote machine"""
-        try:
-            self.ssh_client.run(command)
-        except UnexpectedExit as e:
-            # if we're dealing with a python error here, then stderr is a stringified traceback
-            # so the result will contain 2 tracebacks: the string "message" and the traceback of this exception
-            # would likely be better to throw custom exception but running into pickle errors with celery's serializer
-            raise Exception(e.result.stderr) from None

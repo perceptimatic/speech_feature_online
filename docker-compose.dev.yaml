@@ -46,7 +46,7 @@ services:
       - WORKER_CONCURRENCY
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:
-      - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
+      - ./ec2-private-key.pem:/home/worker/.ssh/id_rsa:ro
   notification-worker:
     <<: *queue-worker
     volumes:

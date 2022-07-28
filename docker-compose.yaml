@@ -57,7 +57,7 @@ services:
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
     volumes:
       - ./worker:/code
-      - ./ec2-private-key.pem:/home/worker/.ssh/ec2-private-key.pem
+      - ./ec2-private-key.pem:/home/worker/.ssh/id_rsa:ro
     networks:
       - speech-feature
   notification-worker: 

@@ -18,4 +18,9 @@ beat_schedule = {
         # daily at midnight UTC
         "schedule": crontab(minute=0, hour=0),
     },
+    "dangling-ec2-check": {
+        "task": "app.worker.terminate_dangling_nodes",
+        # every three hours
+        "schedule": crontab(minute=0, hour="*/3"),
+    },
 }

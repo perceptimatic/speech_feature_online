@@ -1,5 +1,3 @@
-from boto3 import client
-from celery.schedules import crontab
 import datetime
 from io import StringIO
 from json import dumps
@@ -9,15 +7,15 @@ from typing import Any, Dict
 import uuid
 from os import getenv
 
-
 import boto3
 from botocore.exceptions import ClientError
+import docker
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from app.celery_app import celery_app
 from app.emails.smtp_service import SMTPService
 from app.settings import settings
-from app.cloud_providers.ec2.ec2_provider import EC2_Provider
+from app.cloud_providers.ec2.ec2_provider import EC2_Provider, update_known_hosts
 
 jinja_env = Environment(
     loader=PackageLoader("app.emails"), autoescape=select_autoescape()
@@ -28,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @celery_app.task
 def delete_expired_files(continuation_token=None):
-    s3 = client("s3")
+    s3 = boto3.client("s3")
 
     kwargs = {"Bucket": settings.BUCKET_NAME}
 
@@ -40,7 +38,6 @@ def delete_expired_files(continuation_token=None):
     expired = [
         {"Key": obj["Key"]}
         for obj in response["Contents"]
-        # compare utc timestamps, links expire after 7 days so we'll give 1 day buffer
         if (
             datetime.datetime.now(datetime.timezone.utc)
             - obj["LastModified"].replace(tzinfo=datetime.timezone.utc)
@@ -49,14 +46,14 @@ def delete_expired_files(continuation_token=None):
     ]
     s3.delete_objects(Bucket=settings.BUCKET_NAME, Delete={"Objects": expired})
 
-    msg = f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}"
-
     f = StringIO()
-    f.write(msg)
+    f.write(f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}")
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     s3.put_object(
         Bucket=settings.BUCKET_NAME,
-        Key="deletion-history",
+        Key=f"deletion-history {now}",
         Body=f.getvalue(),
     )
 
@@ -64,6 +61,44 @@ def delete_expired_files(continuation_token=None):
 
     if continuation_token:
         delete_expired_files(continuation_token)
+
+
+@celery_app.task(time_limit=60)
+def terminate_dangling_nodes():
+    """Poll instances and terminate those without a docker process or those that have been up for more than 24 hours"""
+    client = boto3.client("ec2")
+    instances = client.describe_instances(
+        Filters=[
+            {
+                "Name": "tag:aws:ec2launchtemplate:id",
+                "Values": [settings.LAUNCH_TEMPLATE_ID],
+            },
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+    if instances["Reservations"] and instances["Reservations"]:
+        for res in instances["Reservations"]:
+            for instance in res["Instances"]:
+                launch_time = instance["LaunchTime"]
+                uptime = (
+                    (
+                        datetime.datetime.now(datetime.timezone.utc)
+                        - launch_time.replace(tzinfo=datetime.timezone.utc)
+                    ).seconds
+                    / 60
+                    / 60
+                )
+                if uptime > 1:
+                    ipaddr = instance["PublicIpAddress"]
+                    update_known_hosts(ipaddr)
+                    docker_client = docker.DockerClient(
+                        base_url=f"ssh://ubuntu@{ipaddr}",
+                        use_ssh_client=True,
+                    )
+                    running_containers = docker_client.containers.list()
+                    docker_client.close()
+                    if not running_containers or uptime > 24:
+                        client.terminate_instances(InstanceIds=[instance["InstanceId"]])
 
 
 # https://docs.celeryq.dev/en/stable/userguide/tasks.html#on_failure
@@ -135,20 +170,42 @@ def process_shennong_job(self, config: Dict[str, Any], provider=EC2_Provider):
 
     with provider() as worker_node:
         attempt_connection(worker_node)
-        worker_node.execute(
-            f"docker run -i --rm -e 'AWS_DEFAULT_REGION={getenv('AWS_DEFAULT_REGION')}' -e 'AWS_SECRET_ACCESS_KEY={getenv('AWS_SECRET_ACCESS_KEY')}' -e 'AWS_ACCESS_KEY_ID={getenv('AWS_ACCESS_KEY_ID')}' {image} '{config_json}'"
-        )
-    try:
-        client.get_object_attributes(
-            Bucket=settings.BUCKET_NAME, Key=save_path, ObjectAttributes=["ObjectSize"]
-        )
-        return client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": settings.BUCKET_NAME, "Key": save_path},
-            ExpiresIn=60 * 60 * 168,
+
+        logger.info("logging into ghcr...")
+        worker_node.docker_client.login(
+            username=settings.GITHUB_OWNER,
+            password=settings.GITHUB_PAT,
+            registry=f"ghcr.io/{settings.GITHUB_OWNER}",
         )
 
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "NoSuchKey":
-            logger.error("Can't find key, results not saved!")
-        raise
+        logger.info("pulling shennong...")
+        worker_node.docker_client.images.pull(image)
+
+        logger.info("running analysis...")
+        worker_node.docker_client.containers.run(
+            image=image,
+            command=[config_json],
+            stderr=True,
+            environment={
+                "AWS_SECRET_ACCESS_KEY": getenv("AWS_SECRET_ACCESS_KEY"),
+                "AWS_DEFAULT_REGION": getenv("AWS_DEFAULT_REGION"),
+                "AWS_ACCESS_KEY_ID": getenv("AWS_ACCESS_KEY_ID"),
+            },
+        )
+
+        try:
+            client.get_object_attributes(
+                Bucket=settings.BUCKET_NAME,
+                Key=save_path,
+                ObjectAttributes=["ObjectSize"],
+            )
+            return client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": settings.BUCKET_NAME, "Key": save_path},
+                ExpiresIn=60 * 60 * 168,
+            )
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                logger.error("Can't find key, results not saved!")
+            raise

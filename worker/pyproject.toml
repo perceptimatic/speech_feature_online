@@ -15,6 +15,7 @@ SQLAlchemy = "^1.4.31"
 boto3 = "^1.21.22"
 Jinja2 = "^3.1.2"
 Fabric = "^2.7.0"
+docker = "^5.0.3"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
