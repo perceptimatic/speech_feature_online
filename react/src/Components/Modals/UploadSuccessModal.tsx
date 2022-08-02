@@ -21,7 +21,7 @@ const UploadSuccessModal: React.FC<UploadSuccessModalProps> = ({
                 Success!
             </Typography>
             <Typography variant="h6" component="h2">
-                File Uploaded Successfully
+                File(s) Uploaded Successfully
             </Typography>
             <Typography sx={{ mt: 2 }}>
                 Click Done to select your processors, or select Continue to

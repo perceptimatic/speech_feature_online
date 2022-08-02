@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AWS from 'aws-sdk';
 import { AwsCredentials } from 'aws-sdk/clients/gamelift';
-import { Job, JobConfig, User } from './types';
+import { Job, SubmittableJobConfig, UploadResponse, User } from './types';
 
 const axiosClient = axios.create();
 
@@ -100,11 +100,6 @@ const getS3 = (credentials: CredentialsOptions) =>
         },
     });
 
-interface UploadResponse {
-    remoteFileName: string;
-    originalFileName: string;
-}
-
 const postFilesToS3 = async (
     files: File[],
     progressCb: (progress: ProgressIncrement) => void
@@ -136,7 +131,10 @@ const postFilesToS3 = async (
             return request.promise().then(
                 d => ({
                     remoteFileName: d.Key,
-                    originalFileName: f.name,
+                    originalFile: {
+                        name: f.name,
+                        size: f.size,
+                    },
                 }),
                 err => new UploadError('Upload failed!', err, f)
             );
@@ -165,9 +163,8 @@ export const postFiles = (
     progressCb: (progress: ProgressIncrement) => void
 ) => postFilesToS3(files, progressCb);
 
-export const submitForm = (formData: JobConfig) => {
-    return axiosClient.post('/api/shennong-job', formData);
-};
+export const submitForm = (formData: SubmittableJobConfig) =>
+    axiosClient.post('/api/shennong-job', formData);
 
 export const login = async (creds: { email: string; password: string }) =>
     axiosClient.post<{ access_token: string }>('/api/token', creds);

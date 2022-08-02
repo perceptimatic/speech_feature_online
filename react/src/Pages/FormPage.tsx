@@ -39,6 +39,7 @@ import {
     submitForm,
 } from '../api';
 import {
+    FailureModal,
     JobFormField,
     Page,
     ProgressLoadingOverlay,
@@ -51,11 +52,14 @@ import {
     AnalysisFormGroup,
     CommonSchema,
     JobConfig,
+    SubmittableJobConfig,
+    UploadResponse,
 } from '../types';
 import { UserContext } from './BasePage';
 
 enum FailureType {
-    TOO_LARGE = 'The file exceeds 50MB maxmimum size. Please compress or split your samples into smaller files.',
+    FILE_TOO_LARGE = 'The file exceeds 50MB maxmimum size. Please compress or split your samples into smaller files.',
+    FILES_TOO_LARGE = 'The total file size of your jobs exceeds the 1GB maxmimum size. Please compress or split your samples into separate jobs.',
     UPLOAD_FAILURE = 'The file failed to upload. Please check your connection and try again.',
 }
 
@@ -73,9 +77,10 @@ const FormPage: React.FC = () => {
     const [progress, setProgress] = useState<ProgressIncrement>();
     const [schema, setSchema] = useState<AnalysisFormGroup[]>();
     const [state, dispatch] = useFormReducer(user!.email);
-    const [submissionSuccess, setSubmissionSuccess] = useState<boolean>();
+    const [submissionSuccess, setSubmissionSuccess] = useState(false);
     const [submissionError, setSubmissionError] = useState<AxiosError>();
-    const [uploadSuccess, setUploadSucess] = useState<boolean>();
+    const [uploadHasFailures, setUploadHasFailures] = useState(false);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
 
     useEffect(() => {
         const cb = async () => {
@@ -150,7 +155,10 @@ const FormPage: React.FC = () => {
             type: 'clear',
         });
 
-    const update = (k: string, v: string | string[] | number | boolean) =>
+    const update = (
+        k: string,
+        v: string | string[] | number | boolean | UploadResponse[]
+    ) =>
         dispatch({
             type: 'update',
             payload: { [k]: v },
@@ -218,33 +226,57 @@ const FormPage: React.FC = () => {
             },
         });
     };
-    const uploadFiles = async (files: File[]) => {
+    const uploadFiles = async (files: File[], uploaded: UploadResponse[]) => {
+        const totalUploaded = uploaded.reduce(
+            (acc, curr) => acc + curr.originalFile.size,
+            0
+        );
         let failures = failedFiles.slice();
-        let success = true;
+        let SUCCESS = true;
 
-        const _files = files.filter(f => {
-            let passes = true;
-            if (f.size > 50 * 2 ** 20) {
-                //50MB
-                passes = false;
-                success = false;
-                failures.push({ file: f, reason: FailureType.TOO_LARGE });
-            }
-            return passes;
-        });
+        const _files = files
+            .filter(f => {
+                let passes = true;
+                if (f.size > 50 * 2 ** 20) {
+                    //50MB
+                    passes = false;
+                    SUCCESS = false;
+                    failures.push({
+                        file: f,
+                        reason: FailureType.FILE_TOO_LARGE,
+                    });
+                }
+                return passes;
+            })
+            .reduce<[File[], number]>(
+                (acc, curr) => {
+                    acc[1] += curr.size;
+                    if (acc[1] > 150 * 2 ** 20) {
+                        SUCCESS = false;
+                        failures.push({
+                            file: curr,
+                            reason: FailureType.FILES_TOO_LARGE,
+                        });
+                    } else {
+                        acc[0].push(curr);
+                    }
+                    return acc;
+                },
+                [[], totalUploaded]
+            )[0];
 
         return postFiles(_files, setProgress)
             .then(r => {
-                const paths = r
+                const files = r
                     .map(res => {
                         if (!isUploadError(res)) {
                             // remove from failed list (if applicable)
                             failures = failures.filter(
-                                f => f.file.name !== res.originalFileName
+                                f => f.file.name !== res.originalFile.name
                             );
-                            return res.remoteFileName;
+                            return res;
                         } else if (isUploadError(res)) {
-                            success = false;
+                            SUCCESS = false;
                             if (
                                 res.file &&
                                 !failures.map(f => f.file).includes(res.file)
@@ -256,10 +288,10 @@ const FormPage: React.FC = () => {
                             }
                         }
                     })
-                    .filter(Boolean);
+                    .filter(Boolean) as UploadResponse[];
                 //add to job payload
-                update('files', state.files.concat(paths as string[]));
-                return success;
+                update('files', state.files.concat(files));
+                return SUCCESS;
             })
             .finally(() => {
                 setFailedFiles(failures);
@@ -267,13 +299,27 @@ const FormPage: React.FC = () => {
             });
     };
 
+    const setUploadStatus = (success: boolean) =>
+        success ? setUploadSuccess(true) : setUploadHasFailures(true);
+
     const getAtLeastOneFeatureSelected = () => !!getKeys(state.analyses).length;
 
     const submitJob = () => {
-        submitForm(state)
-            .then(() => {
-                setSubmissionSuccess(true);
-            })
+        const submittable = {} as SubmittableJobConfig;
+
+        getKeys(state).forEach(k => {
+            if (k === 'files') {
+                submittable.files = state[k].map(f => f.remoteFileName);
+            } else if (k === 'analyses') {
+                //type narrowing....
+                submittable[k] = state[k];
+            } else {
+                submittable[k] = state[k];
+            }
+        });
+
+        submitForm(submittable)
+            .then(() => setSubmissionSuccess(true))
             .catch((e: AxiosError) => setSubmissionError(e));
     };
 
@@ -398,9 +444,10 @@ const FormPage: React.FC = () => {
                                                                     e
                                                                         .currentTarget
                                                                         .files
-                                                                )
+                                                                ),
+                                                                state.files
                                                             ).then(
-                                                                setUploadSucess
+                                                                setUploadStatus
                                                             );
                                                         }
                                                     }}
@@ -435,7 +482,9 @@ const FormPage: React.FC = () => {
                                                 update(
                                                     'files',
                                                     state.files.filter(
-                                                        f => f !== key
+                                                        f =>
+                                                            f.remoteFileName !==
+                                                            key
                                                     )
                                                 );
                                                 if (
@@ -449,7 +498,8 @@ const FormPage: React.FC = () => {
                                                 files: UploadFailure[]
                                             ) =>
                                                 uploadFiles(
-                                                    files.map(f => f.file)
+                                                    files.map(f => f.file),
+                                                    state.files
                                                 )
                                             }
                                             successfulUploads={state.files}
@@ -574,7 +624,9 @@ const FormPage: React.FC = () => {
                                             />
                                             <SummaryItem
                                                 content={state.files
-                                                    .map(getFileBaseName)
+                                                    .map(
+                                                        f => f.originalFile.name
+                                                    )
                                                     .join(', ')}
                                                 label="Files"
                                                 missingOnClick={() =>
@@ -629,7 +681,7 @@ const FormPage: React.FC = () => {
                     {progress && <ProgressLoadingOverlay progress={progress} />}
                     <SuccessModal
                         handleClose={() => {
-                            setSubmissionSuccess(undefined);
+                            setSubmissionSuccess(false);
                             resetForm();
                             setActiveStep(1);
                         }}
@@ -638,6 +690,14 @@ const FormPage: React.FC = () => {
                             user!.email
                         } with a link to the results.`}
                         open={!!submissionSuccess}
+                    />
+                    <FailureModal
+                        handleClose={() => setUploadHasFailures(false)}
+                        header="One or more files failed to upload."
+                        message={
+                            'See the upload results panel for details and actions'
+                        }
+                        open={uploadHasFailures}
                     />
 
                     <SubmissionErrorModal
@@ -648,12 +708,12 @@ const FormPage: React.FC = () => {
                     />
                     <UploadSuccessModal
                         handleClose={() => {
-                            setUploadSucess(undefined);
+                            setUploadSuccess(false);
                         }}
-                        onStay={() => setUploadSucess(undefined)}
+                        onStay={() => setUploadSuccess(false)}
                         onDone={() => {
                             setActiveStep(2);
-                            setUploadSucess(undefined);
+                            setUploadSuccess(false);
                         }}
                         open={!!uploadSuccess}
                     />
@@ -668,7 +728,7 @@ interface UploadStatusBoxProps {
     removeFailedFile: (file: UploadFailure) => void;
     removeUploadedFile: (key: string) => void;
     retryUploads: (files: UploadFailure[]) => void;
-    successfulUploads: string[];
+    successfulUploads: UploadResponse[];
 }
 
 const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
@@ -695,18 +755,20 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                             analysis:
                         </Typography>
                         {successfulUploads.map(f => (
-                            <List key={f}>
+                            <List key={f.remoteFileName}>
                                 <ListItem disablePadding>
                                     <ListItemButton
                                         sx={{ flexGrow: 0 }}
-                                        onClick={() => removeUploadedFile(f)}
+                                        onClick={() =>
+                                            removeUploadedFile(f.remoteFileName)
+                                        }
                                     >
                                         <ListItemIcon>
                                             <Delete />
                                         </ListItemIcon>
                                     </ListItemButton>
                                     <ListItemText>
-                                        {getFileBaseName(f)}
+                                        {f.originalFile.name}
                                     </ListItemText>
                                 </ListItem>
                             </List>
@@ -726,8 +788,11 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                         The following uploads were unsuccessful:
                     </Typography>
                     <List>
-                        {failedUploads.map(u => (
-                            <ListItem disablePadding key={u.file.name}>
+                        {failedUploads.map((u, i) => (
+                            <ListItem
+                                disablePadding
+                                key={`${u.file.name}-${i}}`}
+                            >
                                 <Grid container direction="column">
                                     <Grid
                                         item
@@ -786,9 +851,6 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
         </Grid>
     );
 };
-
-const getFileBaseName = (filepath: string) =>
-    filepath.replaceAll(/(.+)\//g, '');
 
 interface SummaryItemProps {
     content?: string;

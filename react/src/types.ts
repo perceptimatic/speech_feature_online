@@ -1,14 +1,24 @@
-/* for form state */
+export interface UploadResponse {
+    remoteFileName: string;
+    originalFile: {
+        name: string;
+        size: number;
+    };
+}
 
-export interface GlobalJobConfig {
+export interface BaseJobConfig {
+    analyses: Record<string, AnalysisConfig>;
     channel: string;
     email: string;
-    files: string[];
     res: string;
 }
 
-export interface JobConfig extends GlobalJobConfig {
-    analyses: Record<string, AnalysisConfig>;
+export interface JobConfig extends BaseJobConfig {
+    files: UploadResponse[];
+}
+
+export interface SubmittableJobConfig extends BaseJobConfig {
+    files: string[];
 }
 
 export interface AnalysisConfig {
