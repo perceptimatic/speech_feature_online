@@ -60,10 +60,12 @@ services:
     entrypoint: [ "celery", "-A", "app.worker", "beat"]
   redis:
     image: redis:latest
+    restart: always
     networks:
       - speech-feature
   flower:
     image: mher/flower
+    restart: always
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - FLOWER_USERNAME
@@ -75,6 +77,7 @@ services:
     command: celery flower --url_prefix=flower --basic_auth=${FLOWER_USERNAME}:${FLOWER_PASSWORD}
   postgres:
     image: postgres:latest
+    restart: always
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
@@ -86,6 +89,7 @@ services:
     networks:
       - speech-feature
   nginx:
+    restart: always
     image: nginx:1.20
     environment:
       - PRIVKEY_PATH

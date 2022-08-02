@@ -16,6 +16,20 @@ module.exports = {
                 use: 'ts-loader',
                 exclude: /node_modules/,
             },
+            {
+                test: /.md$/,
+                use: [
+                    {
+                        loader: 'html-loader',
+                    },
+                    {
+                        loader: 'markdown-loader',
+                        options: {
+                            // See https://marked.js.org/using_advanced#options
+                        },
+                    },
+                ],
+            },
         ],
     },
     mode: 'development',
