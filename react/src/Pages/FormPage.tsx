@@ -251,7 +251,7 @@ const FormPage: React.FC = () => {
             .reduce<[File[], number]>(
                 (acc, curr) => {
                     acc[1] += curr.size;
-                    if (acc[1] > 150 * 2 ** 20) {
+                    if (acc[1] > 2 ** 30) {
                         SUCCESS = false;
                         failures.push({
                             file: curr,
