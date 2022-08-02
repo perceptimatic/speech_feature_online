@@ -24,6 +24,20 @@ module.exports = {
                 exclude: /node_modules/,
                 include: path.resolve(__dirname, 'src'),
             },
+            {
+                test: /.md$/,
+                use: [
+                    {
+                        loader: 'html-loader',
+                    },
+                    {
+                        loader: 'markdown-loader',
+                        options: {
+                            // See https://marked.js.org/using_advanced#options
+                        },
+                    },
+                ],
+            },
         ],
     },
     mode: 'production',
