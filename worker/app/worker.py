@@ -44,20 +44,24 @@ def delete_expired_files(continuation_token=None):
         ).days
         > 8
     ]
-    s3.delete_objects(Bucket=settings.BUCKET_NAME, Delete={"Objects": expired})
 
-    f = StringIO()
-    f.write(f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}")
+    if expired:
+        s3.delete_objects(Bucket=settings.BUCKET_NAME, Delete={"Objects": expired})
 
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        f = StringIO()
+        f.write(
+            f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}"
+        )
 
-    s3.put_object(
-        Bucket=settings.BUCKET_NAME,
-        Key=f"deletion-history {now}",
-        Body=f.getvalue(),
-    )
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    f.close()
+        s3.put_object(
+            Bucket=settings.BUCKET_NAME,
+            Key=f"deletion-history {now}",
+            Body=f.getvalue(),
+        )
+
+        f.close()
 
     if continuation_token:
         delete_expired_files(continuation_token)

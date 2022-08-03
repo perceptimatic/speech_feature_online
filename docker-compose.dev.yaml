@@ -18,6 +18,7 @@ services:
       - POSTGRES_USER
       - PROCESSING_QUEUE
     entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+    restart: always
   worker: &queue-worker
     image: ghcr.io/perceptimatic/sfo-worker:latest
     restart: always
