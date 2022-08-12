@@ -101,7 +101,7 @@ def terminate_dangling_nodes():
                     )
                     running_containers = docker_client.containers.list()
                     docker_client.close()
-                    if not running_containers or uptime > 24:
+                    if not running_containers or uptime > 48:
                         client.terminate_instances(InstanceIds=[instance["InstanceId"]])
 
 

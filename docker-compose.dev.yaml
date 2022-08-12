@@ -24,6 +24,11 @@ services:
     restart: always
     networks:
       - speech-feature
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: sfo-workers
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_DEFAULT_REGION
