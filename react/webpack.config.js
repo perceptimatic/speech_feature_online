@@ -67,12 +67,6 @@ module.exports = {
                 process.env.AWS_DEFAULT_REGION
             ),
             'process.env.BUCKET_NAME': JSON.stringify(process.env.BUCKET_NAME),
-            'process.env.REACT_UPLOAD_ENDPOINT': JSON.stringify(
-                process.env.REACT_UPLOAD_ENDPOINT
-            ),
-            'process.env.STORAGE_DRIVER': JSON.stringify(
-                process.env.STORAGE_DRIVER
-            ),
         }),
     ],
 };

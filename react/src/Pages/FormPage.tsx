@@ -487,12 +487,8 @@ const FormPage: React.FC = () => {
                                                             key
                                                     )
                                                 );
-                                                if (
-                                                    process.env
-                                                        .STORAGE_DRIVER === 's3'
-                                                ) {
-                                                    removeFileFromS3(key);
-                                                }
+
+                                                removeFileFromS3(key);
                                             }}
                                             retryUploads={(
                                                 files: UploadFailure[]

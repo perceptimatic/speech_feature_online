@@ -10,8 +10,9 @@ from celery.backends.database import Task
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from app.models import UserTask
+from sqlalchemy.exc import ProgrammingError
 
+from app.models import UserTask
 from app.schemas import (
     LoginRequest,
     Token,
@@ -158,7 +159,7 @@ async def fetch_user_tasks(
 ):
     """Return the current user"""
     # user must be admin or the current user must have the same id
-    if (current_user.id != user_id) and current_user.has_role("admin"):
+    if (current_user.id != user_id) and not current_user.has_role("admin"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     user = (
@@ -166,6 +167,12 @@ async def fetch_user_tasks(
         if current_user.id == user_id
         else db.query(User).filter(User.id == user_id).one()
     )
+
+    # if no job has been run yet, celery's task tables won't exist, in which case we'll bail with an empty result
+    try:
+        db.query(Task).count()
+    except ProgrammingError:
+        return []
 
     user_tasks = user.load_tasks(db)
 

@@ -12,7 +12,6 @@ class Settings:
     GITHUB_OWNER: str = getenv("GITHUB_OWNER")
     NOTIFICATION_QUEUE: str = getenv("NOTIFICATION_QUEUE")
     PROJECT_ROOT: str = path.abspath(path.join(path.dirname(__file__), ".."))
-    STORAGE_DRIVER: str = getenv("STORAGE_DRIVER")
     SENDER_EMAIL: str = getenv("SENDER_EMAIL")
     SMTP_HOST: str = getenv("SMTP_HOST")
     SMTP_PORT: str = getenv("SMTP_PORT")
