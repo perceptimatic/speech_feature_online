@@ -17,6 +17,14 @@ from sqlalchemy.orm import relationship, Session
 from app.database import Base
 
 
+def update_model(model, attrs: dict):
+    """attach new values to model"""
+    for k, v in attrs.items():
+        if hasattr(model, k):
+            setattr(model, k, v)
+    return model
+
+
 roles_users_table = Table(
     "roles_users",
     Base.metadata,

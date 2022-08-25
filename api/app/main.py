@@ -12,13 +12,16 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import ProgrammingError
 
-from app.models import UserTask
+from app.models import UserTask, User as UserModel, update_model
+
 from app.schemas import (
     LoginRequest,
     Token,
     User,
     UserIn,
+    UserPasswordReset,
     UserTaskOut,
+    UserUpdate,
     UserVerification,
 )
 from app.settings import settings
@@ -28,6 +31,7 @@ from app.util import (
     create_user,
     get_db,
     get_current_user,
+    get_password_hash,
     get_user_by_email,
 )
 from app.validators import raise_422, validate_job_request, ValidationViolation
@@ -49,12 +53,14 @@ celery_app.conf.task_routes = {
     "app.worker.process_shennong_job": {"queue": settings.PROCESSING_QUEUE},
     "app.worker.test": {"queue": settings.PROCESSING_QUEUE},
     "app.worker.verify_user_email": {"queue": settings.NOTIFICATION_QUEUE},
+    "app.worker.reset_password": {"queue": settings.NOTIFICATION_QUEUE},
 }
 
 
-def make_verification_code():
-    """Randomish string for verification"""
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+def make_randomish_string(all_cap=True, k=6):
+    """Generat a randomish string"""
+    letters = string.ascii_uppercase if all_cap else string.ascii_letters
+    return "".join(random.choices(letters + string.digits, k=k))
 
 
 @app.get("/api/temp-creds")
@@ -147,7 +153,7 @@ async def login_for_access_token(request: LoginRequest, db: Session = Depends(ge
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/api/users/current/", response_model=User)
+@app.get("/api/users/current", response_model=User)
 async def fetch_current_user(current_user: User = Depends(get_current_user)):
     """Return the current user"""
     return current_user
@@ -198,7 +204,7 @@ async def post_user(request: UserIn, db=Depends(get_db)):
     if existing:
         raise_422([ValidationViolation(field="email", message="Email already taken!")])
 
-    verification_code = make_verification_code()
+    verification_code = make_randomish_string()
 
     user = await create_user(db, request, verification_code)
 
@@ -209,11 +215,58 @@ async def post_user(request: UserIn, db=Depends(get_db)):
     return user
 
 
-@app.post("/api/users/{user_email}/verification_code", response_model=Token)
-async def verify_user(user_email: str, request: UserVerification, db=Depends(get_db)):
-    """Verify validation code and"""
+@app.patch("/api/users/{user_id}", response_model=User)
+async def update_user(
+    user_id: int,
+    update_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """update a user record"""
 
-    user = get_user_by_email(db, user_email)
+    if (current_user.id != user_id) and not current_user.has_role("admin"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    user = db.query(UserModel).filter(UserModel.id == user_id).one()
+
+    updated = update_data.dict(exclude_unset=True)
+
+    if updated.get("password"):
+        updated["password"] = get_password_hash(updated["password"])
+
+    update_model(user, updated)
+
+    db.commit()
+
+    return user
+
+
+@app.post("/api/users/reset-password")
+async def reset_password(request: UserPasswordReset, db=Depends(get_db)):
+    """Reset the user's password and send an email notification"""
+    user = get_user_by_email(db, request.user_email)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found!",
+        )
+
+    new_password = make_randomish_string(False, 10)
+    user.password = get_password_hash(new_password)
+
+    db.commit()
+
+    celery_app.send_task("app.worker.reset_password", [user.email, new_password])
+
+    return user
+
+
+@app.post("/api/users/verification_code", response_model=Token)
+async def verify_user(request: UserVerification, db=Depends(get_db)):
+    """Validate validation code"""
+
+    user = get_user_by_email(db, request.user_email)
 
     if user is None:
         raise HTTPException(
@@ -230,7 +283,7 @@ async def verify_user(user_email: str, request: UserVerification, db=Depends(get
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
-    user.verification_code = make_verification_code()
+    user.verification_code = make_randomish_string()
     user.verification_tries += 1
     db.commit()
     if user.verification_tries <= 3:

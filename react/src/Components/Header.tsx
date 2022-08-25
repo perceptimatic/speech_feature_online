@@ -1,5 +1,7 @@
 import React, { useContext } from 'react';
-import { AppBar, Grid, Toolbar, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { AppBar, Grid, IconButton, Toolbar, Typography } from '@mui/material';
+import { Settings } from '@mui/icons-material';
 import { UserContext } from '../Pages/BasePage';
 import { MenuLink } from '.';
 
@@ -10,6 +12,8 @@ const Header: React.FC = () => {
         window.location.assign('/login');
         localStorage.removeItem('jwt');
     };
+
+    const navigate = useNavigate();
 
     return (
         <>
@@ -24,6 +28,7 @@ const Header: React.FC = () => {
                             </Typography>
                         </Grid>
                         <Grid
+                            alignItems="center"
                             container
                             spacing={2}
                             item
@@ -39,6 +44,20 @@ const Header: React.FC = () => {
                                         <Typography>
                                             Hello, {user.username}!
                                         </Typography>
+                                    </Grid>
+                                    <Grid item>
+                                        <IconButton
+                                            onClick={() =>
+                                                navigate('/settings')
+                                            }
+                                            sx={{
+                                                color: theme =>
+                                                    theme.palette.primary
+                                                        .contrastText,
+                                            }}
+                                        >
+                                            <Settings />
+                                        </IconButton>
                                     </Grid>
                                     <Grid item>
                                         <MenuLink href="/">New job</MenuLink>

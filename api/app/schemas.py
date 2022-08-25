@@ -1,7 +1,15 @@
 from datetime import datetime
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, EmailStr
+
+
+class UserUpdate(BaseModel):
+    """Updatable user"""
+
+    is_admin: Optional[str] = None
+    password: Optional[str] = None
+    username: Optional[str] = None
 
 
 class UserIn(BaseModel):
@@ -84,4 +92,13 @@ class UserTaskOut(BaseModel):
 
 
 class UserVerification(BaseModel):
+    """Payload for user verification"""
+
     verification_code: str
+    user_email: EmailStr
+
+
+class UserPasswordReset(BaseModel):
+    """Payload for user password reset"""
+
+    user_email: EmailStr

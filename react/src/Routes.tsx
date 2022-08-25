@@ -15,6 +15,7 @@ const FormPage = lazy(() => import('./Pages/FormPage'));
 const JobListPage = lazy(() => import('./Pages/JobListPage'));
 const LoginPage = lazy(() => import('./Pages/LoginPage'));
 const RegistrationPage = lazy(() => import('./Pages/RegistrationPage'));
+const UserSettingsPage = lazy(() => import('./Pages/UserSettingsPage'));
 
 const Routes: React.FC = () => (
     <Router>
@@ -32,6 +33,14 @@ const Routes: React.FC = () => (
                 />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegistrationPage />} />
+                <Route
+                    path="/settings"
+                    element={
+                        <PrivateRoute>
+                            <UserSettingsPage />
+                        </PrivateRoute>
+                    }
+                />
                 <Route
                     path="/jobs"
                     element={
@@ -57,7 +66,7 @@ const PrivateRoute: React.FC<{ role?: string } & RouteProps> = ({
     }
 
     if (loading) {
-        return <span>Loading...</span>;
+        return <LoadingOverlay open={true} />;
     }
     return children as React.ReactElement;
 };

@@ -9,8 +9,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { useFetchCurrentUser, useLogin } from '../hooks';
-import { Page } from '../Components';
+import { useFetchCurrentUser, useLogin, useResetPassword } from '../hooks';
+import { Page, SuccessModal } from '../Components';
 import { UserContext } from './BasePage';
 
 const LoginPage: React.FC = () => {
@@ -20,6 +20,13 @@ const LoginPage: React.FC = () => {
     const userContext = useContext(UserContext);
 
     const { error, loading, submitLogin, success } = useLogin();
+
+    const {
+        error: resetPasswordError,
+        resetPassword,
+        resetSuccess: resetResetPasswordSuccess,
+        success: resetPasswordSuccess,
+    } = useResetPassword();
 
     const navigate = useNavigate();
 
@@ -127,7 +134,32 @@ const LoginPage: React.FC = () => {
                 <Grid container justifyContent="center" item>
                     <Link to="/register">Register</Link>
                 </Grid>
+                <Grid container direction="column" alignItems="center" item>
+                    <Grid item>
+                        <Button
+                            disabled={!emailIsValid()}
+                            disableElevation={true}
+                            onClick={() => resetPassword(email)}
+                            variant="text"
+                        >
+                            Reset password
+                        </Button>
+                    </Grid>
+                    {!!resetPasswordError && (
+                        <Grid item>
+                            <Typography color="error">
+                                {resetPasswordError}
+                            </Typography>
+                        </Grid>
+                    )}
+                </Grid>
             </Grid>
+            <SuccessModal
+                handleClose={resetResetPasswordSuccess}
+                header="Password reset!"
+                message="Check your email for your new password"
+                open={resetPasswordSuccess}
+            />
         </Page>
     );
 };

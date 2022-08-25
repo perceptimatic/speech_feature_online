@@ -71,12 +71,23 @@ export interface ProcessorSchema extends PostprocessorSchema {
     valid_postprocessors: string[];
 }
 
-export interface User {
+interface BaseUser {
+    username: string;
+}
+
+export interface UpdatableUser extends BaseUser {
+    password: string;
+}
+
+export interface SubmittableUser extends UpdatableUser {
+    email: string;
+}
+
+export interface User extends BaseUser {
     created: string;
     email: string;
     id: number;
     roles: Role[];
-    username: string;
 }
 
 interface Role {

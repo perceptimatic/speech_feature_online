@@ -1,7 +1,14 @@
 import axios from 'axios';
 import AWS from 'aws-sdk';
 import { AwsCredentials } from 'aws-sdk/clients/gamelift';
-import { Job, SubmittableJobConfig, UploadResponse, User } from './types';
+import {
+    Job,
+    SubmittableJobConfig,
+    SubmittableUser,
+    UpdatableUser,
+    UploadResponse,
+    User,
+} from './types';
 
 const axiosClient = axios.create();
 
@@ -158,36 +165,37 @@ export const removeFileFromS3 = async (key: string) => {
         .promise();
 };
 
-export const postFiles = (
-    files: File[],
-    progressCb: (progress: ProgressIncrement) => void
-) => postFilesToS3(files, progressCb);
-
-export const submitForm = (formData: SubmittableJobConfig) =>
-    axiosClient.post('/api/shennong-job', formData);
-
-export const login = async (creds: { email: string; password: string }) =>
-    axiosClient.post<{ access_token: string }>('/api/token', creds);
-
-export const register = async (info: {
-    email: string;
-    password: string;
-    username: string;
-}) => axiosClient.post<User>('/api/users', info);
-
 export const fetchCurrentUser = async () =>
     axiosClient.get<User>('/api/users/current');
 
 export const fetchUserJobs = async (userId: number) =>
     axiosClient.get<Job[]>(`/api/users/${userId}/tasks`);
 
+export const login = async (creds: { email: string; password: string }) =>
+    axiosClient.post<{ access_token: string }>('/api/token', creds);
+
+export const postFiles = (
+    files: File[],
+    progressCb: (progress: ProgressIncrement) => void
+) => postFilesToS3(files, progressCb);
+
+export const register = async (info: SubmittableUser) =>
+    axiosClient.post<User>('/api/users', info);
+
+export const resetPassword = async (user_email: string) =>
+    axiosClient.post(`/api/users/reset-password`, { user_email });
+
+export const submitForm = (formData: SubmittableJobConfig) =>
+    axiosClient.post<User>('/api/shennong-job', formData);
+
+export const updateUser = (userId: number, payload: Partial<UpdatableUser>) =>
+    axiosClient.patch(`/api/users/${userId}`, payload);
+
 export const verifyRegistration = async (
-    email: string,
+    user_email: string,
     verification_code: string
 ) =>
-    axiosClient.post<{ access_token: string }>(
-        `/api/users/${email}/verification_code`,
-        {
-            verification_code,
-        }
-    );
+    axiosClient.post<{ access_token: string }>(`/api/users/verification_code`, {
+        user_email,
+        verification_code,
+    });

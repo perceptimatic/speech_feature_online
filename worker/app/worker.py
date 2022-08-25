@@ -149,6 +149,18 @@ def verify_user_email(email_addr: str, verification_code: str):
 
 
 @celery_app.task()
+def reset_password(email_addr: str, password: str):
+    """Verify user email"""
+    template = jinja_env.get_template("password-reset.html")
+    html = template.render(
+        password=password,
+    )
+    mailer = SMTPService("Your new SFO password", email_addr, html)
+    mailer.send()
+    return "Email sent"
+
+
+@celery_app.task()
 def notify_job_complete(
     result_url: str,
     email_address: str,

@@ -12,6 +12,10 @@ result_backend = f"db+{settings.POSTGRES_CONNECTION_STRING}"
 
 worker_concurrency = settings.WORKER_CONCURRENCY
 
+# do not remove tasks from database
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-expires
+result_expires = None
+
 beat_schedule = {
     "daily-s3-check": {
         "task": "app.worker.delete_expired_files",
