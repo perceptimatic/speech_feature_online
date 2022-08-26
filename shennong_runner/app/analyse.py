@@ -130,7 +130,10 @@ class LocalFileManager(AbstractContextManager):
         mkdir(self.tmp_download_dir)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.remove_temps()
+        # temps on filesystem no longer matter b/c node is terminated at job end
+        # leaving base file on S3 so that users can rerun jobs for 7 days
+        # self.remove_temps()
+        pass
 
     def get_tmp_result_dir_name(self, name: str):
         """Create a temporary directory on the local filesystem"""
