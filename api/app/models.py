@@ -1,5 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from json import loads
+from os import path
 
+import boto3
+from celery.backends.database import TaskExtended
 from fastapi import HTTPException, status
 from sqlalchemy import (
     Boolean,
@@ -10,11 +14,11 @@ from sqlalchemy import (
     String,
     Table,
 )
-
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Session
 
 from app.database import Base
+from app.settings import Settings
 
 
 def update_model(model, attrs: dict):
@@ -44,6 +48,46 @@ class UserTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     taskmeta_id = Column(String(255), nullable=True, unique=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    can_retry = False
+    taskmeta = None
+
+    def load_can_retry_value(self):
+        """If taskmeta property (relationship w/ possibly nonexistant
+        TaskExtended table) exists, check that job files exist in s3,
+        allowing job to be retried
+        """
+        if (
+            self.taskmeta
+            and self.taskmeta.kwargs
+            and self.created > (datetime.now() - timedelta(days=7))
+        ):
+            kwargs = loads(self.taskmeta.kwargs)
+            if config := kwargs.get("config"):
+                client = boto3.client("s3")
+                files = config["files"]
+                if files:
+                    prefixes = {path.split(f)[0] for f in files}
+                    keycount = 0
+                    # a job might have files with several prefixes due to mixing and matching via retry
+                    # so we'll pull out the unique prefixes and test they exist
+                    for prefix in prefixes:
+                        res = client.list_objects_v2(
+                            Bucket=Settings.BUCKET_NAME, Prefix=prefix
+                        )
+                        keycount += res["KeyCount"]
+                        # push count into existing, then confirm count is >= files
+                    if keycount >= len(files):
+                        self.can_retry = True
+
+    def load_taskmeta(self, db):
+        """Load task meta and attach, assumes that TaskExtended table existence check
+        has been performed by caller
+        """
+        self.taskmeta = (
+            db.query(TaskExtended)
+            .filter(TaskExtended.task_id == self.taskmeta_id)
+            .first()
+        )
 
 
 class Role(Base):
@@ -66,13 +110,13 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), nullable=False, unique=True, index=True)
-    username = Column(String(255), nullable=False)
-    password = Column(String(255), nullable=False)
     active = Column(Boolean, nullable=False, default=False)
+    created = Column(DateTime, nullable=False, default=datetime.now())
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    password = Column(String(255), nullable=False)
     verification_code = Column(String(255), nullable=True)
     verification_tries = Column(Integer, nullable=False, default=0)
-    created = Column(DateTime, nullable=False, default=datetime.now())
+    username = Column(String(255), nullable=False)
 
     roles = relationship(
         "Role",
@@ -81,15 +125,15 @@ class User(Base):
         lazy="selectin",
     )
 
+    tasks = relationship(
+        "UserTask",
+    )
+
     def add_role(self, db: Session, role: str):
         """Give the user a role if not already present."""
         role = db.query(Role).filter(Role.role == role).one()
         self.roles = set(self.roles).union(role)
         db.commit()
-
-    def load_tasks(self, db: Session):
-        """load tasks"""
-        return db.query(UserTask).filter(UserTask.user_id == self.id).all()
 
     def has_role(self, role: str):
         """Check if user has the given role."""

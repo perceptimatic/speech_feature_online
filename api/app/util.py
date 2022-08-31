@@ -1,5 +1,7 @@
+""" Utility functions for use in API routes; use elsewhere will likely result in circular import issues """
 from datetime import datetime, timedelta
 import logging
+from typing import Iterable, Callable
 
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -16,8 +18,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 logger = logging.getLogger(__name__)
-
-""" todo: need to refactor module structure as circular imports are inevitable """
 
 
 def get_db():
@@ -96,6 +96,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_d
     return user
 
 
+async def resolve_user(db: Session, current_user: User, user_id: int):
+    """If a route is restricted to resource owner (i.e., user with user_id)
+    or admin user, authorize or raise unauthorized
+    """
+    if (current_user.id != user_id) and not current_user.has_role("admin"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    user = (
+        current_user
+        if current_user.id == user_id
+        else db.query(User).filter(User.id == user_id).one()
+    )
+
+    return user
+
+
 async def create_user(db: Session, user: UserIn, code: str):
     """Create a new user."""
 
@@ -117,3 +133,13 @@ async def create_user(db: Session, user: UserIn, code: str):
     db.commit()
 
     return new_user
+
+
+def find(it: Iterable, cb: Callable):
+    """Return first value that cb returns truthy for"""
+    res = None
+    try:
+        res = next(g for g in it if cb(g))
+    except StopIteration:
+        pass
+    return res

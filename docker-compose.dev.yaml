@@ -8,6 +8,7 @@ services:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_DEFAULT_REGION
+      - BUCKET_NAME
       - EMAIL_ALLOWLIST
       - FAST_API_DEFAULT_ADMIN_PASSWORD
       - JWT_SECRET
@@ -17,7 +18,7 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_USER
       - PROCESSING_QUEUE
-    entrypoint: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+    entrypoint: ["uvicorn", "app.main:app", "--porxy-headers", "--host", "0.0.0.0", "--port", "80"]
     restart: always
   worker: &queue-worker
     image: ghcr.io/perceptimatic/sfo-worker:latest
@@ -54,14 +55,10 @@ services:
       - ./ec2-private-key.pem:/home/worker/.ssh/id_rsa:ro
   notification-worker:
     <<: *queue-worker
-    volumes:
-      - ./worker:/code
     # celery is the queue that beat-scheduler pushes to
     entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE},celery" ]
   beat-scheduler:
     <<: *queue-worker
-    volumes:
-      - ./worker:/code
     entrypoint: [ "celery", "-A", "app.worker", "beat"]
   redis:
     image: redis:latest

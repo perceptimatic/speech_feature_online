@@ -1,9 +1,10 @@
-import React, { useContext, useEffect, useMemo } from 'react';
-import { Box, Grid, Link, Typography } from '@mui/material';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, Button, Grid, Link, Typography } from '@mui/material';
 import { GridColDef, DataGrid } from '@mui/x-data-grid';
-import { Page } from '../Components';
+import { LoadingOverlay, Page } from '../Components';
 import { useFetchUserJobs } from '../hooks';
-import { Job } from '../types';
+import { Job, SubmittablePaginationMeta } from '../types';
 import { UserContext } from './BasePage';
 
 const formatDate = (date: string) => {
@@ -23,7 +24,7 @@ const parseAmz = (ts: string) => {
     return new Date(`${y}-${m}-${d}T${h}:${min}:${s}`);
 };
 
-const getIsExpired = (link: string) => {
+export const getIsExpired = (link: string) => {
     const ttlMatch = link.match(/X-Amz-Expires=(\d+)/);
     const createdMatch = link.match(/X-Amz-Date=([A-Za-z0-9]+)/);
 
@@ -35,15 +36,18 @@ const getIsExpired = (link: string) => {
 };
 
 const JobListPage: React.FC = () => {
+    const [query, setQuery] = useState<SubmittablePaginationMeta>({
+        desc: true,
+        per_page: 5,
+        page: 1,
+        sort: 'created',
+    });
+
     const { user } = useContext(UserContext);
 
-    const { jobs: _jobs, getUserJobs } = useFetchUserJobs();
+    const { jobs, getUserJobs, loading, meta } = useFetchUserJobs();
 
-    const jobs = useMemo(() => {
-        if (_jobs) {
-            return _jobs.sort((a, b) => (a.created > b.created ? -1 : 1));
-        }
-    }, [_jobs]);
+    const navigate = useNavigate();
 
     const columns: GridColDef<Job>[] = useMemo(() => {
         return [
@@ -51,6 +55,7 @@ const JobListPage: React.FC = () => {
                 field: 'id',
                 flex: 1,
                 headerName: 'Job ID',
+                maxWidth: 75,
             },
             {
                 field: 'created',
@@ -62,29 +67,44 @@ const JobListPage: React.FC = () => {
                 field: 'status',
                 flex: 1,
                 headerName: 'Status',
-                valueGetter: ({ row }) => row.task_info?.status || 'PENDING',
+                maxWidth: 100,
+                valueGetter: ({ row }) => row.taskmeta?.status || 'PENDING',
             },
             {
                 field: 'date_done',
                 flex: 1,
                 headerName: 'Completed At',
                 valueGetter: ({ row }) =>
-                    row.task_info?.date_done
-                        ? formatDate(row.task_info.date_done)
+                    row.taskmeta?.date_done
+                        ? formatDate(row.taskmeta.date_done)
                         : 'N/A',
+            },
+            {
+                field: 'can_retry',
+                flex: 1,
+                headerName: 'Retry',
+                maxWidth: 75,
+                renderCell: ({ row }) => (
+                    <Button
+                        onClick={() => navigate(`/${row.id}`)}
+                        disabled={!row.can_retry}
+                    >
+                        Retry
+                    </Button>
+                ),
             },
             {
                 field: 'result',
                 flex: 1,
                 headerName: 'Download Link',
                 renderCell: ({ row }) =>
-                    row.task_info?.result &&
-                    typeof row.task_info.result === 'string' ? (
-                        getIsExpired(row.task_info.result) ? (
+                    row.taskmeta?.result &&
+                    typeof row.taskmeta.result === 'string' ? (
+                        getIsExpired(row.taskmeta.result) ? (
                             'Expired'
                         ) : (
-                            <Link href={row.task_info.result}>
-                                <>{row.task_info?.result}</>
+                            <Link href={row.taskmeta.result}>
+                                <>{row.taskmeta?.result}</>
                             </Link>
                         )
                     ) : (
@@ -96,23 +116,42 @@ const JobListPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            getUserJobs(user);
+            getUserJobs(user, query);
         }
-    }, [user, getUserJobs]);
+    }, [getUserJobs, query, user]);
+
+    const requery = (newQuery: SubmittablePaginationMeta) =>
+        setQuery({ ...query, ...newQuery });
 
     return (
         <Page title="Job History">
             <Grid container spacing={2} direction="column">
                 <Grid item>
-                    {jobs && jobs.length ? (
+                    {!!jobs && !!jobs.length && (
                         <Box sx={{ height: 500, width: '100%' }}>
-                            <DataGrid rows={jobs} columns={columns} />
+                            <DataGrid
+                                autoHeight
+                                columns={columns}
+                                //note that mui pagination is 0-indexed but server is 1-indexed
+                                onPageChange={p => requery({ page: p + 1 })}
+                                onPageSizeChange={per_page =>
+                                    requery({ per_page })
+                                }
+                                page={meta?.page ? meta.page - 1 : 0}
+                                paginationMode="server"
+                                pageSize={meta?.per_page || 5}
+                                rowCount={meta?.total || 1}
+                                rows={jobs}
+                                rowsPerPageOptions={[5, 10, 20, 30]}
+                            />
                         </Box>
-                    ) : (
+                    )}
+                    {jobs && !jobs.length && (
                         <Typography color="error">No Jobs!</Typography>
                     )}
                 </Grid>
             </Grid>
+            <LoadingOverlay open={loading} />
         </Page>
     );
 };

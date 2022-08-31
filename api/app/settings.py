@@ -6,6 +6,7 @@ class Settings:
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     APP_ENV: str = getenv("APP_ENV")
+    BUCKET_NAME: str = getenv("BUCKET_NAME")
     EMAIL_ALLOWLIST = getenv("EMAIL_ALLOWLIST")
     FAST_API_DEBUG: bool = getenv("FAST_API_DEBUG") == "true"
     FAST_API_DEFAULT_ADMIN_PASSWORD: str = getenv("FAST_API_DEFAULT_ADMIN_PASSWORD")

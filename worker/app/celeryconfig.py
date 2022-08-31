@@ -10,6 +10,8 @@ result_serializer = "json"
 
 result_backend = f"db+{settings.POSTGRES_CONNECTION_STRING}"
 
+result_extended = True
+
 worker_concurrency = settings.WORKER_CONCURRENCY
 
 # do not remove tasks from database

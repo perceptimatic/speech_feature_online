@@ -23,14 +23,25 @@ const Routes: React.FC = () => (
         <Suspense fallback={<LoadingOverlay open={true} />}>
             <RouterRoutes>
                 <Route path="/about" element={<AboutPage />} />
-                <Route
-                    path="/"
-                    element={
-                        <PrivateRoute>
-                            <FormPage />
-                        </PrivateRoute>
-                    }
-                />
+                <Route path="/">
+                    <Route
+                        path=""
+                        element={
+                            <PrivateRoute>
+                                <FormPage />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path=":jobId"
+                        element={
+                            <PrivateRoute>
+                                <FormPage />
+                            </PrivateRoute>
+                        }
+                    />
+                </Route>
+
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegistrationPage />} />
                 <Route

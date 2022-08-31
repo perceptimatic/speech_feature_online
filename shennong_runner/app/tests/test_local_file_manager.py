@@ -1,4 +1,3 @@
-from unittest import result
 import pytest
 from os import path
 from pathlib import Path

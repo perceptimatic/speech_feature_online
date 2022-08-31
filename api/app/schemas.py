@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Generic, List, Optional, TypeVar, Union
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Json
+from pydantic.generics import GenericModel
 
 
 class UserUpdate(BaseModel):
@@ -68,10 +69,11 @@ class TaskOut(BaseModel):
     """Celery task, model from celery.backends.database"""
 
     id: int
-    task_id: str
+    date_done: datetime
+    kwargs: Union[Json, None]
     status: str
     result: Union[str, dict, None]
-    date_done: datetime
+    task_id: str
     traceback: Union[str, None]
 
     class Config:
@@ -82,9 +84,10 @@ class UserTaskOut(BaseModel):
     """Tasks belonging to the user"""
 
     id: int
+    can_retry: Union[bool, None]
     created: datetime
     taskmeta_id: str
-    task_info: Union[TaskOut, None]
+    taskmeta: Union[TaskOut, None]
     user_id: int
 
     class Config:
@@ -102,3 +105,17 @@ class UserPasswordReset(BaseModel):
     """Payload for user password reset"""
 
     user_email: EmailStr
+
+
+T = TypeVar("T")
+
+
+class PaginatedOutput(GenericModel, Generic[T]):
+    """Generic Schema for paginated result"""
+
+    data: List[T]
+    desc: Union[bool, None]
+    page: int
+    per_page: int
+    sort: Union[str, None]
+    total: int

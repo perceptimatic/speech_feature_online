@@ -173,8 +173,11 @@ def notify_job_complete(
 
 
 @celery_app.task(bind=True, on_failure=on_failure)
-def process_shennong_job(self, config: Dict[str, Any], provider=EC2_Provider):
+def process_shennong_job(self, config: Dict[str, Any] = None, provider=EC2_Provider):
     """Run the shennong job."""
+
+    if config is None:
+        raise ValueError("config is required!")
 
     client = boto3.client("s3")
     self.provider = provider

@@ -3,7 +3,9 @@ import AWS from 'aws-sdk';
 import { AwsCredentials } from 'aws-sdk/clients/gamelift';
 import {
     Job,
+    PaginatedResult,
     SubmittableJobConfig,
+    SubmittablePaginationMeta,
     SubmittableUser,
     UpdatableUser,
     UploadResponse,
@@ -168,8 +170,16 @@ export const removeFileFromS3 = async (key: string) => {
 export const fetchCurrentUser = async () =>
     axiosClient.get<User>('/api/users/current');
 
-export const fetchUserJobs = async (userId: number) =>
-    axiosClient.get<Job[]>(`/api/users/${userId}/tasks`);
+export const fetchUserJob = async (userId: number, jobId: number) =>
+    axiosClient.get<Job>(`/api/users/${userId}/tasks/${jobId}`);
+
+export const fetchUserJobs = async (
+    userId: number,
+    pagination: SubmittablePaginationMeta = {}
+) =>
+    axiosClient.get<PaginatedResult<Job>>(`/api/users/${userId}/tasks`, {
+        params: pagination,
+    });
 
 export const login = async (creds: { email: string; password: string }) =>
     axiosClient.post<{ access_token: string }>('/api/token', creds);

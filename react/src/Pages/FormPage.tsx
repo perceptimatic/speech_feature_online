@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import {
     Box,
@@ -41,6 +42,7 @@ import {
 import {
     FailureModal,
     JobFormField,
+    LoadingOverlay,
     Page,
     ProgressLoadingOverlay,
     SubmissionErrorModal,
@@ -55,6 +57,7 @@ import {
     SubmittableJobConfig,
     UploadResponse,
 } from '../types';
+import { useFetchUserJob } from '../hooks';
 import { UserContext } from './BasePage';
 
 enum FailureType {
@@ -115,6 +118,39 @@ const FormPage: React.FC = () => {
 
         cb();
     }, []);
+
+    const { jobId } = useParams<{ jobId: string }>();
+
+    const { getUserJob, loading, job } = useFetchUserJob();
+
+    useEffect(() => {
+        if (jobId && user) {
+            getUserJob(user, +jobId);
+        }
+    }, [jobId, user, getUserJob]);
+
+    useEffect(() => {
+        if (job && jobId) {
+            if (job.can_retry && job.taskmeta?.kwargs) {
+                const { config } = job.taskmeta.kwargs;
+                dispatch({
+                    type: 'update',
+                    payload: {
+                        analyses: config.analyses,
+                        channel: config.channel,
+                        files: config.files.map(f => ({
+                            remoteFileName: f,
+                            originalFile: {
+                                name: f.split(/[\\/]/).pop()!,
+                                size: 0,
+                            },
+                        })),
+                        res: config.res,
+                    },
+                });
+            }
+        }
+    }, [dispatch, job, jobId]);
 
     useEffect(() => {
         const invalid: string[] = [];
@@ -226,6 +262,7 @@ const FormPage: React.FC = () => {
             },
         });
     };
+
     const uploadFiles = async (files: File[], uploaded: UploadResponse[]) => {
         const totalUploaded = uploaded.reduce(
             (acc, curr) => acc + curr.originalFile.size,
@@ -675,6 +712,7 @@ const FormPage: React.FC = () => {
                         </>
                     </Grid>
                     {progress && <ProgressLoadingOverlay progress={progress} />}
+                    <LoadingOverlay open={loading} />
                     <SuccessModal
                         handleClose={() => {
                             setSubmissionSuccess(false);
@@ -745,31 +783,28 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
         <Grid container item spacing={2} direction="column">
             {successfulUploads.length ? (
                 <Grid item>
-                    <Box sx={{ maxHeight: '350px', overflowY: 'auto' }}>
-                        <Typography>
-                            The following files will be included in the
-                            analysis:
-                        </Typography>
-                        {successfulUploads.map(f => (
-                            <List key={f.remoteFileName}>
-                                <ListItem disablePadding>
-                                    <ListItemButton
-                                        sx={{ flexGrow: 0 }}
-                                        onClick={() =>
-                                            removeUploadedFile(f.remoteFileName)
-                                        }
-                                    >
-                                        <ListItemIcon>
-                                            <Delete />
-                                        </ListItemIcon>
-                                    </ListItemButton>
-                                    <ListItemText>
-                                        {f.originalFile.name}
-                                    </ListItemText>
-                                </ListItem>
-                            </List>
-                        ))}
-                    </Box>
+                    <Typography>
+                        The following files will be included in the analysis:
+                    </Typography>
+                    {successfulUploads.map(f => (
+                        <List key={f.remoteFileName}>
+                            <ListItem disablePadding>
+                                <ListItemButton
+                                    sx={{ flexGrow: 0 }}
+                                    onClick={() =>
+                                        removeUploadedFile(f.remoteFileName)
+                                    }
+                                >
+                                    <ListItemIcon>
+                                        <Delete />
+                                    </ListItemIcon>
+                                </ListItemButton>
+                                <ListItemText>
+                                    {f.originalFile.name}
+                                </ListItemText>
+                            </ListItem>
+                        </List>
+                    ))}
                 </Grid>
             ) : (
                 <Grid item>

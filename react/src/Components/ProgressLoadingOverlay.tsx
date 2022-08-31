@@ -22,7 +22,14 @@ const ProgressLoadingOverlay: React.FC<{ progress: ProgressIncrement }> = ({
             }}
             open={!!progress}
         >
-            <Box sx={{ display: 'flex', width: '50%' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    width: '50%',
+                    maxHeight: '350px',
+                    overflowY: 'auto',
+                }}
+            >
                 <Paper sx={{ width: '100%', padding: 3 }}>
                     <Typography variant="h4">Upload in Progress</Typography>
                     <Divider />

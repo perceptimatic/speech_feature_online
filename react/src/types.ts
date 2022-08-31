@@ -96,17 +96,47 @@ interface Role {
 }
 
 export interface Job {
+    id: number;
+    can_retry: boolean | undefined;
     created: string;
-    task_info: JobInfo | null;
+    taskmeta: JobInfo | null;
     taskmeta_id: string;
     user_id: number;
 }
 
 interface JobInfo {
     id: number;
-    task_id: string;
+    date_done: string;
+    kwargs: {
+        config: {
+            analyses: Record<string, AnalysisConfig>;
+            bucket: string;
+            channel: string;
+            files: string[];
+            res: string;
+            save_path: string;
+        };
+    };
     status: string;
     result: string;
-    date_done: string;
+    task_id: string;
     traceback: string;
+}
+
+interface BasePaginationMeta {
+    desc: boolean | undefined;
+    page: number;
+    per_page: number;
+    sort: string | undefined;
+}
+
+export type SubmittablePaginationMeta = Partial<BasePaginationMeta>;
+
+export interface PaginationMeta extends BasePaginationMeta {
+    total: number;
+}
+
+export interface PaginatedResult<T extends Record<string, any>>
+    extends PaginationMeta {
+    data: T[];
 }
