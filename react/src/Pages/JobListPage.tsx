@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Grid, Link, Typography } from '@mui/material';
-import { GridColDef, DataGrid } from '@mui/x-data-grid';
+import { GridColDef, DataGrid, GridSortModel } from '@mui/x-data-grid';
 import { LoadingOverlay, Page } from '../Components';
 import { useFetchUserJobs } from '../hooks';
 import { Job, SubmittablePaginationMeta } from '../types';
@@ -68,12 +68,14 @@ const JobListPage: React.FC = () => {
                 flex: 1,
                 headerName: 'Status',
                 maxWidth: 100,
+                sortable: false,
                 valueGetter: ({ row }) => row.taskmeta?.status || 'PENDING',
             },
             {
                 field: 'date_done',
                 flex: 1,
                 headerName: 'Completed At',
+                sortable: false,
                 valueGetter: ({ row }) =>
                     row.taskmeta?.date_done
                         ? formatDate(row.taskmeta.date_done)
@@ -92,6 +94,7 @@ const JobListPage: React.FC = () => {
                         Retry
                     </Button>
                 ),
+                sortable: false,
             },
             {
                 field: 'result',
@@ -110,6 +113,7 @@ const JobListPage: React.FC = () => {
                     ) : (
                         'Unavailable'
                     ),
+                sortable: false,
             },
         ];
     }, [navigate]);
@@ -119,6 +123,20 @@ const JobListPage: React.FC = () => {
             getUserJobs(user, query);
         }
     }, [getUserJobs, query, user]);
+
+    const onSortModelChange = (model: GridSortModel) => {
+        if (model[0]) {
+            requery({
+                sort: model[0].field,
+                desc: model[0].sort === 'desc',
+            });
+        } else {
+            requery({
+                sort: undefined,
+                desc: undefined,
+            });
+        }
+    };
 
     const requery = (newQuery: SubmittablePaginationMeta) =>
         setQuery({ ...query, ...newQuery });
@@ -132,17 +150,30 @@ const JobListPage: React.FC = () => {
                             <DataGrid
                                 autoHeight
                                 columns={columns}
+                                disableColumnFilter
                                 //note that mui pagination is 0-indexed but server is 1-indexed
                                 onPageChange={p => requery({ page: p + 1 })}
                                 onPageSizeChange={per_page =>
                                     requery({ per_page })
                                 }
+                                onSortModelChange={onSortModelChange}
                                 page={meta?.page ? meta.page - 1 : 0}
                                 paginationMode="server"
                                 pageSize={meta?.per_page || 5}
                                 rowCount={meta?.total || 1}
                                 rows={jobs}
                                 rowsPerPageOptions={[5, 10, 20, 30]}
+                                sortModel={[
+                                    {
+                                        field: meta?.sort || query.sort!,
+                                        sort: meta
+                                            ? meta.desc
+                                                ? 'desc'
+                                                : 'asc'
+                                            : 'desc',
+                                    },
+                                ]}
+                                sortingMode="server"
                             />
                         </Box>
                     )}

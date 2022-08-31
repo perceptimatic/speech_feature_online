@@ -217,7 +217,6 @@ async def fetch_user_tasks(
 
     # if no job has been run yet, celery's task tables won't exist, in which case we'll bail with an empty result
     # would be great if we could check dynamically in relationship but doesn't seem possible :(
-    # if we need to do this anywhere else, can just put this as a method on the model
     try:
         db.query(TaskExtended).first()
     except ProgrammingError:
