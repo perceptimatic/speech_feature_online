@@ -24,10 +24,12 @@ RUN mkdir /home/${USERNAME}/.ssh && \
 
 
 # Install Poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
+ENV POETRY_HOME=/opt/poetry
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -&& \
     cd /usr/local/bin && \
-    chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \
-    ln -s /opt/poetry/bin/poetry && \
+    chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \ 
     poetry config virtualenvs.create false
 
 COPY . .
