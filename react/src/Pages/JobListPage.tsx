@@ -112,7 +112,7 @@ const JobListPage: React.FC = () => {
                     ),
             },
         ];
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         if (user) {
