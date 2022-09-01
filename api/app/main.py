@@ -114,7 +114,7 @@ async def get_temp_creds(current_user: User = Depends(get_current_user)):
     """Fetch temporary S3 creds for uploading a file through the front end"""
     client = boto3.client("sts")
     response = client.get_session_token(
-        DurationSeconds=900,
+        DurationSeconds=3600,
     )
     return response
 

@@ -97,6 +97,20 @@ const getTempCredentials = async () => {
     }
 };
 
+const chunkFiles = <T>(files: T[], chunkSize = 5) => {
+    return files.reduce<T[][]>(
+        (acc, curr) => {
+            if (acc[0].length === chunkSize) {
+                acc.unshift([curr]);
+            } else {
+                acc[0].push(curr);
+            }
+            return acc;
+        },
+        [[]]
+    );
+};
+
 const getS3 = (credentials: CredentialsOptions) =>
     new AWS.S3({
         region: process.env.AWS_DEFAULT_REGION!,
@@ -112,7 +126,7 @@ const getS3 = (credentials: CredentialsOptions) =>
 const postFilesToS3 = async (
     files: File[],
     progressCb: (progress: ProgressIncrement) => void
-): Promise<(UploadResponse | UploadError)[]> => {
+) => {
     const credentialResponse = await getTempCredentials();
 
     if (isUploadError(credentialResponse)) {
@@ -124,6 +138,27 @@ const postFilesToS3 = async (
     /* assign a random prefix to prevent files existing with the same name */
     const prefix = Math.random().toString(36).slice(2);
 
+    const chunks = chunkFiles(files);
+
+    let results = [] as (UploadError | UploadResponse)[];
+
+    for (const chunk of chunks) {
+        if (results.filter(r => isUploadError(r)).length > 10) {
+            return results;
+        }
+        const res = await postChunk(chunk, s3, prefix, progressCb);
+        results = results.concat(res);
+    }
+
+    return results;
+};
+
+const postChunk = async (
+    files: File[],
+    s3: AWS.S3,
+    prefix: string,
+    progressCb: (progress: ProgressIncrement) => void
+) => {
     return Promise.all(
         files.map(f => {
             const request = s3.upload({
@@ -137,16 +172,21 @@ const postFilesToS3 = async (
                 progressCb(inc);
             });
 
-            return request.promise().then(
-                d => ({
-                    remoteFileName: d.Key,
-                    originalFile: {
-                        name: f.name,
-                        size: f.size,
-                    },
-                }),
-                err => new UploadError('Upload failed!', err, f)
-            );
+            return request
+                .promise()
+                .then(
+                    d =>
+                        ({
+                            remoteFileName: d.Key,
+                            originalFile: {
+                                name: f.name,
+                                size: f.size,
+                            },
+                        } as UploadResponse)
+                )
+                .catch(e => {
+                    return new UploadError('Upload failed!', e.reason, f);
+                });
         })
     );
 };

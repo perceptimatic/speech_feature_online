@@ -68,12 +68,12 @@ def _validate_top_level_fields(request: dict):
 
     if request["channel"] not in [1, 2]:
         violations.append(
-            ValidationViolation("channel", "channel should be either 1 or 2")
+            ValidationViolation("channel", "Channel should be either 1 or 2")
         )
 
     if not isinstance(request["files"], list) or not request["files"]:
         violations.append(
-            ValidationViolation("files", "files[] must contain at least one file")
+            ValidationViolation("files", "Files[] must contain at least one file")
         )
 
     allowed_res = [".npz", ".mat", ".pkl", ".h5f", ".ark", ".csv"]

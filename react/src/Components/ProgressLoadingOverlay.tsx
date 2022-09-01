@@ -26,11 +26,17 @@ const ProgressLoadingOverlay: React.FC<{ progress: ProgressIncrement }> = ({
                 sx={{
                     display: 'flex',
                     width: '50%',
-                    maxHeight: '350px',
-                    overflowY: 'auto',
                 }}
             >
-                <Paper sx={{ width: '100%', padding: 3 }}>
+                <Paper
+                    sx={{
+                        width: '100%',
+                        padding: 3,
+                        flexWrap: 'nowrap',
+                        maxHeight: '350px',
+                        overflowY: 'auto',
+                    }}
+                >
                     <Typography variant="h4">Upload in Progress</Typography>
                     <Divider />
                     <UploadProgressIndicator progress={progress} />
@@ -60,13 +66,14 @@ const UploadProgressIndicator: React.FC<UploadProgressProps> = ({
             progressMap[progress.key] = progress;
             setProgressMap(progressMap);
         }
-    }, [progress, progressMap]);
+        /*eslint-disable-next-line react-hooks/exhaustive-deps*/
+    }, [progress]);
 
     return (
         <Grid container direction="column">
-            {Object.entries(progressMap).map(([k, v]) => (
+            {Object.entries(progressMap).map(([k, v], i) => (
                 <Grid container direction="row" key={k} item>
-                    <UploadProgressBar progress={v} />
+                    <UploadProgressBar progress={v} index={i} />
                 </Grid>
             ))}
         </Grid>
@@ -74,10 +81,14 @@ const UploadProgressIndicator: React.FC<UploadProgressProps> = ({
 };
 
 interface UploadProgressBarProps {
+    index: number;
     progress: ProgressIncrement;
 }
 
-const UploadProgressBar: React.FC<UploadProgressBarProps> = ({ progress }) => {
+const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
+    index,
+    progress,
+}) => {
     return (
         <Grid
             container
@@ -87,7 +98,8 @@ const UploadProgressBar: React.FC<UploadProgressBarProps> = ({ progress }) => {
             alignItems="center"
         >
             <Grid item xs={3}>
-                <Typography variant="caption">{progress.key}</Typography>:
+                <Typography variant="caption">{`${progress.key} (${index})`}</Typography>
+                :
             </Grid>
             <Grid item xs={9}>
                 <LinearProgress

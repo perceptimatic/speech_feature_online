@@ -71,11 +71,12 @@ class UserTask(Base):
                     # a job might have files with several prefixes due to mixing and matching via retry
                     # so we'll pull out the unique prefixes and test they exist
                     for prefix in prefixes:
-                        res = client.list_objects_v2(
+                        paginator = client.get_paginator("list_objects_v2")
+                        page_iterator = paginator.paginate(
                             Bucket=Settings.BUCKET_NAME, Prefix=prefix
                         )
-                        keycount += res["KeyCount"]
-                        # push count into existing, then confirm count is >= files
+                        for page in page_iterator:
+                            keycount += page["KeyCount"]
                     if keycount >= len(files):
                         self.can_retry = True
 

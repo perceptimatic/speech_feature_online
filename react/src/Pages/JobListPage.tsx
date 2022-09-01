@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Button, Grid, Link, Typography } from '@mui/material';
+import { Box, Grid, Link, Typography } from '@mui/material';
+import { DoNotDisturbOn } from '@mui/icons-material';
 import { GridColDef, DataGrid, GridSortModel } from '@mui/x-data-grid';
 import { LoadingOverlay, Page } from '../Components';
 import { useFetchUserJobs } from '../hooks';
@@ -47,8 +47,6 @@ const JobListPage: React.FC = () => {
 
     const { jobs, getUserJobs, loading, meta } = useFetchUserJobs();
 
-    const navigate = useNavigate();
-
     const columns: GridColDef<Job>[] = useMemo(() => {
         return [
             {
@@ -85,15 +83,13 @@ const JobListPage: React.FC = () => {
                 field: 'can_retry',
                 flex: 1,
                 headerName: 'Retry',
-                maxWidth: 75,
-                renderCell: ({ row }) => (
-                    <Button
-                        onClick={() => navigate(`/${row.id}`)}
-                        disabled={!row.can_retry}
-                    >
-                        Retry
-                    </Button>
-                ),
+                maxWidth: 125,
+                renderCell: ({ row }) =>
+                    row.can_retry ? (
+                        <Link href={`/${row.id}`}>Retry / Modify</Link>
+                    ) : (
+                        <DoNotDisturbOn />
+                    ),
                 sortable: false,
             },
             {
@@ -116,7 +112,7 @@ const JobListPage: React.FC = () => {
                 sortable: false,
             },
         ];
-    }, [navigate]);
+    }, []);
 
     useEffect(() => {
         if (user) {

@@ -63,7 +63,7 @@ export interface ProcessorFieldSchema {
     type: 'string' | 'integer' | 'number' | 'boolean';
     default: string | number | boolean;
     required: boolean;
-    options?: string[];
+    options?: string[] | number[];
 }
 
 export interface ProcessorSchema extends PostprocessorSchema {

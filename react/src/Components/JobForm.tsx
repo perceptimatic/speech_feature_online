@@ -202,7 +202,7 @@ export default function JobFormField<K extends boolean | string | number>({
                                 onChange={() => update(o)}
                                 value={o}
                                 control={<Radio />}
-                                label={capitalize(o)}
+                                label={capitalize(o.toString())}
                             />
                         ))}
                     </RadioGroup>
@@ -438,7 +438,7 @@ export const globalDisplayFields: FormItem[] = [
         component: 'radio',
         default: 1,
         label: 'If recording is in stereo, which channel would you like to keep (1 or 2)?',
-        options: ['1', '2'],
+        options: [1, 2],
         required: true,
     },
 

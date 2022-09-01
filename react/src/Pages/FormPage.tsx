@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import {
     Box,
@@ -36,7 +36,6 @@ import {
     isUploadError,
     postFiles,
     ProgressIncrement,
-    removeFileFromS3,
     submitForm,
 } from '../api';
 import {
@@ -270,8 +269,10 @@ const FormPage: React.FC = () => {
         );
         let failures = failedFiles.slice();
         let SUCCESS = true;
+        const existingNames = uploaded.map(f => f.originalFile.name);
 
         const _files = files
+            /* ensure no file is bigger than 50MB */
             .filter(f => {
                 let passes = true;
                 if (f.size > 50 * 2 ** 20) {
@@ -285,6 +286,9 @@ const FormPage: React.FC = () => {
                 }
                 return passes;
             })
+            /* remove duplicate files */
+            .filter(file => !existingNames.includes(file.name))
+            /* ensure total is less than 1 GB */
             .reduce<[File[], number]>(
                 (acc, curr) => {
                     acc[1] += curr.size;
@@ -364,14 +368,19 @@ const FormPage: React.FC = () => {
         <Page title="Run an Analysis">
             <Grid container direction="column" alignItems="flex-start">
                 <Grid item>
-                    <Box>
-                        <Typography>
-                            Use the controls below to upload an audio file to be
-                            processed by the Shennong software. The results will
-                            be sent to the email address associated with your
-                            user account.
-                        </Typography>
-                    </Box>
+                    <Typography>
+                        Use the controls below to upload an audio file to be
+                        processed by the Shennong software. The results will be
+                        sent to the email address associated with your user
+                        account.
+                    </Typography>
+                    <Typography variant="caption">
+                        For best results, begin with small jobs, adjusting
+                        parameters as necessary after inspecting results. You
+                        can rerun jobs with new parameters and/or files by
+                        choosing the "Retry/Modify" option on the{' '}
+                        <Link to="/jobs">Job History page</Link>.
+                    </Typography>
                 </Grid>
                 <Grid container item direction="row">
                     <Divider
@@ -501,7 +510,7 @@ const FormPage: React.FC = () => {
                                     <Grid item>
                                         <Divider />
                                     </Grid>
-                                    <Grid item>
+                                    <Grid item container>
                                         <UploadStatusBox
                                             failedUploads={failedFiles}
                                             removeFailedFile={file => {
@@ -524,8 +533,9 @@ const FormPage: React.FC = () => {
                                                             key
                                                     )
                                                 );
-
-                                                removeFileFromS3(key);
+                                                //leaving in s3 for now to prevent files from previous runs from being removed
+                                                //during reruns
+                                                //removeFileFromS3(key);
                                             }}
                                             retryUploads={(
                                                 files: UploadFailure[]
@@ -786,25 +796,27 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                     <Typography>
                         The following files will be included in the analysis:
                     </Typography>
-                    {successfulUploads.map(f => (
-                        <List key={f.remoteFileName}>
-                            <ListItem disablePadding>
-                                <ListItemButton
-                                    sx={{ flexGrow: 0 }}
-                                    onClick={() =>
-                                        removeUploadedFile(f.remoteFileName)
-                                    }
-                                >
-                                    <ListItemIcon>
-                                        <Delete />
-                                    </ListItemIcon>
-                                </ListItemButton>
-                                <ListItemText>
-                                    {f.originalFile.name}
-                                </ListItemText>
-                            </ListItem>
-                        </List>
-                    ))}
+                    <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                        {successfulUploads.map(f => (
+                            <List key={f.remoteFileName}>
+                                <ListItem disablePadding>
+                                    <ListItemButton
+                                        sx={{ flexGrow: 0 }}
+                                        onClick={() =>
+                                            removeUploadedFile(f.remoteFileName)
+                                        }
+                                    >
+                                        <ListItemIcon>
+                                            <Delete />
+                                        </ListItemIcon>
+                                    </ListItemButton>
+                                    <ListItemText>
+                                        {f.originalFile.name}
+                                    </ListItemText>
+                                </ListItem>
+                            </List>
+                        ))}
+                    </Box>
                 </Grid>
             ) : (
                 <Grid item>
@@ -902,7 +914,9 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
         </Grid>
         <Grid xs={10} item>
             {content ? (
-                <Typography>{content}</Typography>
+                <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    <Typography>{content}</Typography>
+                </Box>
             ) : (
                 <Typography
                     sx={{ cursor: 'pointer' }}
@@ -930,7 +944,7 @@ const StyledStepLabel = styled(StepLabel)(({ theme }) => ({
 const FadeInStep: React.FC<{ active: boolean }> = ({ active, children }) => {
     return active ? (
         <Fade in={true} timeout={500}>
-            <span>{children}</span>
+            <Box sx={{ width: '100%' }}>{children}</Box>
         </Fade>
     ) : (
         <span />
