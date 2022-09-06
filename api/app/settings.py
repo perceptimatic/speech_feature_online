@@ -15,7 +15,6 @@ class Settings:
     NOTIFICATION_QUEUE: str = getenv("NOTIFICATION_QUEUE")
     PROCESSING_QUEUE: str = getenv("PROCESSING_QUEUE")
     PROJECT_ROOT: str = path.abspath(path.join(path.dirname(__file__), ".."))
-    UPLOAD_DIR: str = getenv("UPLOAD_DIR")
     POSTGRES_CONNECTION_STRING: str = f"postgresql://{getenv('POSTGRES_USER')}:{getenv('POSTGRES_PASSWORD')}@postgres/{getenv('POSTGRES_DB')}"
 
 

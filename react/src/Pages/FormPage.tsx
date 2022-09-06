@@ -60,8 +60,8 @@ import { useFetchUserJob } from '../hooks';
 import { UserContext } from './BasePage';
 
 enum FailureType {
-    FILE_TOO_LARGE = 'The file exceeds 50MB maxmimum size. Please compress or split your samples into smaller files.',
-    FILES_TOO_LARGE = 'The total file size of your jobs exceeds the 1GB maxmimum size. Please compress or split your samples into separate jobs.',
+    FILE_TOO_LARGE = 'The file exceeds 50MB maximum size. Please compress or split your samples into smaller files.',
+    FILES_TOO_LARGE = 'The total file size of your jobs exceeds the 1GB maximum size. Please compress or split your samples into separate jobs.',
     UPLOAD_FAILURE = 'The file failed to upload. Please check your connection and try again.',
 }
 
@@ -831,55 +831,65 @@ const UploadStatusBox: React.FC<UploadStatusBoxProps> = ({
                         The following uploads were unsuccessful:
                     </Typography>
                     <List>
-                        {failedUploads.map((u, i) => (
-                            <ListItem
-                                disablePadding
-                                key={`${u.file.name}-${i}}`}
-                            >
-                                <Grid container direction="column">
-                                    <Grid
-                                        item
-                                        container
-                                        direction="row"
-                                        wrap="nowrap"
-                                    >
-                                        <ListItemButton
-                                            sx={{ flexGrow: 0 }}
-                                            onClick={() => removeFailedFile(u)}
+                        <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            {failedUploads.map((u, i) => (
+                                <ListItem
+                                    disablePadding
+                                    key={`${u.file.name}-${i}}`}
+                                >
+                                    <Grid container direction="column">
+                                        <Grid
+                                            item
+                                            container
+                                            direction="row"
+                                            wrap="nowrap"
                                         >
-                                            <ListItemIcon>
-                                                <Delete />
-                                            </ListItemIcon>
-                                        </ListItemButton>
-                                        <ListItemText>
-                                            {u.file.name}
-                                        </ListItemText>
-                                    </Grid>
-                                    <Grid
-                                        item
-                                        container
-                                        direction="row"
-                                        wrap="nowrap"
-                                    >
-                                        <ListItemText>
-                                            Reason: {u.reason}
-                                        </ListItemText>
-                                        {u.reason ===
-                                            FailureType.UPLOAD_FAILURE && (
-                                            <Checkbox
-                                                checked={
-                                                    retries &&
-                                                    retries
-                                                        .map(f => f.file.name)
-                                                        .includes(u.file.name)
+                                            <ListItemButton
+                                                sx={{ flexGrow: 0 }}
+                                                onClick={() =>
+                                                    removeFailedFile(u)
                                                 }
-                                                onChange={() => toggleRetry(u)}
-                                            />
-                                        )}
+                                            >
+                                                <ListItemIcon>
+                                                    <Delete />
+                                                </ListItemIcon>
+                                            </ListItemButton>
+                                            <ListItemText>
+                                                {u.file.name}
+                                            </ListItemText>
+                                        </Grid>
+                                        <Grid
+                                            item
+                                            container
+                                            direction="row"
+                                            wrap="nowrap"
+                                        >
+                                            <ListItemText>
+                                                Reason: {u.reason}
+                                            </ListItemText>
+                                            {u.reason ===
+                                                FailureType.UPLOAD_FAILURE && (
+                                                <Checkbox
+                                                    checked={
+                                                        retries &&
+                                                        retries
+                                                            .map(
+                                                                f => f.file.name
+                                                            )
+                                                            .includes(
+                                                                u.file.name
+                                                            )
+                                                    }
+                                                    onChange={() =>
+                                                        toggleRetry(u)
+                                                    }
+                                                />
+                                            )}
+                                        </Grid>
                                     </Grid>
-                                </Grid>
-                            </ListItem>
-                        ))}
+                                </ListItem>
+                            ))}
+                        </Box>
                     </List>
                     <Button
                         variant="contained"

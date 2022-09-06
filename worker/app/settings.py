@@ -11,7 +11,6 @@ class Settings:
     GITHUB_PAT: str = getenv("GITHUB_PAT")
     GITHUB_OWNER: str = getenv("GITHUB_OWNER")
     NOTIFICATION_QUEUE: str = getenv("NOTIFICATION_QUEUE")
-    PROJECT_ROOT: str = path.abspath(path.join(path.dirname(__file__), ".."))
     SENDER_EMAIL: str = getenv("SENDER_EMAIL")
     SMTP_HOST: str = getenv("SMTP_HOST")
     SMTP_PORT: str = getenv("SMTP_PORT")
@@ -19,7 +18,6 @@ class Settings:
     SMTP_PASSWORD: str = getenv("SMTP_PASSWORD")
     WORKER_CONCURRENCY: int = int(getenv("WORKER_CONCURRENCY", 1))
     WORKER_DEBUG: bool = getenv("WORKER_DEBUG") == "true"
-    UPLOAD_DIR: str = getenv("UPLOAD_DIR")
 
 
 settings = Settings()
