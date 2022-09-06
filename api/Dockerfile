@@ -22,8 +22,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 ENV POETRY_HOME=/opt/poetry
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -&& \
-    cd /usr/local/bin && \
+RUN curl -sSL https://install.python-poetry.org | python3 - && \
     chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \ 
     poetry config virtualenvs.create false
 

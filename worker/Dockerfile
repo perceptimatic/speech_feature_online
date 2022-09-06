@@ -16,7 +16,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
 RUN apt-get update && apt-get install -y \
-    openssh-client
+    openssh-client \
+    build-essential
 
 RUN mkdir /home/${USERNAME}/.ssh && \
     chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}/.ssh && \
@@ -27,8 +28,7 @@ RUN mkdir /home/${USERNAME}/.ssh && \
 ENV POETRY_HOME=/opt/poetry
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -&& \
-    cd /usr/local/bin && \
+RUN curl -sSL https://install.python-poetry.org | python3 - && \
     chown ${USER_UID}:${USER_GID} /opt/poetry/bin/poetry && \ 
     poetry config virtualenvs.create false
 
