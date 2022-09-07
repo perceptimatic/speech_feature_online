@@ -10,6 +10,7 @@ import {
     UpdatableUser,
     UploadResponse,
     User,
+    UserModel,
 } from './types';
 
 const axiosClient = axios.create();
@@ -208,7 +209,12 @@ export const removeFileFromS3 = async (key: string) => {
 };
 
 export const fetchCurrentUser = async () =>
-    axiosClient.get<User>('/api/users/current');
+    axiosClient.get<UserModel>('/api/users/current');
+
+export const fetchJobs = async (pagination: SubmittablePaginationMeta = {}) =>
+    axiosClient.get<PaginatedResult<Job>>(`/api/tasks`, {
+        params: pagination,
+    });
 
 export const fetchUserJob = async (userId: number, jobId: number) =>
     axiosClient.get<Job>(`/api/users/${userId}/tasks/${jobId}`);

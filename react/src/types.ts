@@ -83,11 +83,15 @@ export interface SubmittableUser extends UpdatableUser {
     email: string;
 }
 
-export interface User extends BaseUser {
+export interface UserModel extends BaseUser {
     created: string;
     email: string;
     id: number;
     roles: Role[];
+}
+
+export interface User extends UserModel {
+    isAdmin: boolean;
 }
 
 interface Role {
@@ -101,6 +105,7 @@ export interface Job {
     created: string;
     taskmeta: JobInfo | null;
     taskmeta_id: string;
+    user?: User;
     user_id: number;
 }
 

@@ -1,9 +1,16 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Box, Grid, Link, Typography } from '@mui/material';
+import {
+    Box,
+    FormControlLabel,
+    Grid,
+    Link,
+    Switch,
+    Typography,
+} from '@mui/material';
 import { DoNotDisturbOn } from '@mui/icons-material';
 import { GridColDef, DataGrid, GridSortModel } from '@mui/x-data-grid';
 import { LoadingOverlay, Page } from '../Components';
-import { useFetchUserJobs } from '../hooks';
+import { useFetchUserJobs, useFetchJobs } from '../hooks';
 import { Job, SubmittablePaginationMeta } from '../types';
 import { UserContext } from './BasePage';
 
@@ -36,19 +43,55 @@ export const getIsExpired = (link: string) => {
 };
 
 const JobListPage: React.FC = () => {
-    const [query, setQuery] = useState<SubmittablePaginationMeta>({
-        desc: true,
-        per_page: 5,
-        page: 1,
-        sort: 'created',
-    });
+    const [viewType, setViewType] = useState<'user' | 'all'>('user');
+
+    const [query, setQuery] = useState<SubmittablePaginationMeta>();
 
     const { user } = useContext(UserContext);
 
-    const { jobs, getUserJobs, loading, meta } = useFetchUserJobs();
+    const {
+        jobs: userJobs,
+        getUserJobs,
+        loading: userJobsLoading,
+        meta: userJobsMeta,
+    } = useFetchUserJobs();
+
+    const {
+        jobs: allJobs,
+        getJobs,
+        loading: allJobsLoading,
+        meta: allJobsMeta,
+    } = useFetchJobs();
+
+    useEffect(() => {
+        if (viewType) {
+            setQuery({
+                desc: true,
+                per_page: 5,
+                page: 1,
+                sort: 'created',
+            });
+        }
+    }, [viewType]);
+
+    const jobs = useMemo(() => {
+        return viewType === 'all' ? allJobs : userJobs;
+    }, [allJobs, userJobs, viewType]);
+
+    const meta = useMemo(() => {
+        return viewType === 'all' ? allJobsMeta : userJobsMeta;
+    }, [allJobsMeta, userJobsMeta, viewType]);
+
+    const loading = useMemo(() => {
+        return allJobsLoading || userJobsLoading;
+    }, [allJobsLoading, userJobsLoading]);
+
+    const fetchJobs = useMemo<typeof getJobs | typeof getUserJobs>(() => {
+        return viewType === 'all' ? getJobs : getUserJobs;
+    }, [getJobs, getUserJobs, viewType]);
 
     const columns: GridColDef<Job>[] = useMemo(() => {
-        return [
+        const baseCols: GridColDef<Job>[] = [
             {
                 field: 'id',
                 flex: 1,
@@ -112,13 +155,28 @@ const JobListPage: React.FC = () => {
                 sortable: false,
             },
         ];
-    }, []);
+
+        if (viewType === 'all') {
+            baseCols.splice(1, 0, {
+                field: 'username',
+                flex: 1,
+                headerName: 'Username',
+                renderCell: ({ row }) => row.user?.username,
+                sortable: false,
+            });
+        }
+
+        return baseCols;
+    }, [viewType]);
 
     useEffect(() => {
-        if (user) {
-            getUserJobs(user, query);
+        if (user && query) {
+            viewType === 'user'
+                ? (fetchJobs as typeof getUserJobs)(user, query)
+                : (fetchJobs as typeof getJobs)(query);
         }
-    }, [getUserJobs, query, user]);
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    }, [query, user]);
 
     const onSortModelChange = (model: GridSortModel) => {
         if (model[0]) {
@@ -140,9 +198,26 @@ const JobListPage: React.FC = () => {
     return (
         <Page title="Job History">
             <Grid container spacing={2} direction="column">
+                {!!user && !!user.isAdmin && (
+                    <Grid item>
+                        <FormControlLabel
+                            label="View All"
+                            control={
+                                <Switch
+                                    checked={viewType === 'all'}
+                                    onChange={() =>
+                                        setViewType(
+                                            viewType === 'all' ? 'user' : 'all'
+                                        )
+                                    }
+                                />
+                            }
+                        />
+                    </Grid>
+                )}
                 <Grid item>
                     {!!jobs && !!jobs.length && (
-                        <Box sx={{ height: 500, width: '100%' }}>
+                        <Box sx={{ width: '100%' }}>
                             <DataGrid
                                 autoHeight
                                 columns={columns}
@@ -161,7 +236,7 @@ const JobListPage: React.FC = () => {
                                 rowsPerPageOptions={[5, 10, 20, 30]}
                                 sortModel={[
                                     {
-                                        field: meta?.sort || query.sort!,
+                                        field: meta?.sort || 'created',
                                         sort: meta
                                             ? meta.desc
                                                 ? 'desc'

@@ -1,5 +1,6 @@
 export { default as useAuth } from './useAuth';
 export { default as useFetchCurrentUser } from './useFetchCurrentUser';
+export { default as useFetchJobs } from './useFetchJobs';
 export { default as useFetchUserJobs } from './useFetchUserJobs';
 export { default as useFetchUserJob } from './useFetchUserJob';
 export { default as useLogin } from './useLogin';

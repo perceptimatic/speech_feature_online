@@ -12,7 +12,12 @@ const useFetchCurrentUser = () => {
         setError('');
         try {
             const result = await fetchCurrentUser();
-            setUser(result.data);
+            const userModel = result.data;
+
+            (userModel as User).isAdmin = !!userModel.roles.find(
+                r => r.role === 'admin'
+            );
+            setUser(userModel as User);
         } catch (e) {
             console.error(e);
             setError(
