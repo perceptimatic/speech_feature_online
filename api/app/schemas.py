@@ -89,6 +89,7 @@ class UserTaskOut(BaseModel):
     taskmeta_id: str
     taskmeta: Union[TaskOut, None]
     user_id: int
+    user: Union[User, None]
 
     class Config:
         orm_mode = True

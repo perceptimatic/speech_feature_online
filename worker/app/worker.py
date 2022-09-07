@@ -48,8 +48,7 @@ def delete_expired_files(continuation_token=None):
     if expired:
         s3.delete_objects(Bucket=settings.BUCKET_NAME, Delete={"Objects": expired})
 
-        f = StringIO()
-        f.write(
+        f = StringIO(
             f"Deleted {len(expired)} files: {[list(o.values())[0] for o in expired]}"
         )
 
@@ -180,11 +179,18 @@ def process_shennong_job(self, config: Dict[str, Any] = None, provider=EC2_Provi
         raise ValueError("config is required!")
 
     client = boto3.client("s3")
-    self.provider = provider
     save_path = f"{uuid.uuid4().hex}.zip"
+    config_path = f"{uuid.uuid4().hex}.json"
     config["save_path"] = save_path
-    config["bucket"] = settings.BUCKET_NAME
     config_json = dumps(config)
+    client.put_object(
+        Bucket=settings.BUCKET_NAME,
+        Key=config_path,
+        Body=StringIO(config_json).getvalue(),
+    )
+
+    job_args = dumps({"config_path": config_path, "bucket": settings.BUCKET_NAME})
+
     image = f"ghcr.io/{settings.GITHUB_OWNER}/sfo-shennong-runner:latest"
 
     with provider() as worker_node:
@@ -203,7 +209,7 @@ def process_shennong_job(self, config: Dict[str, Any] = None, provider=EC2_Provi
         logger.info("running analysis...")
         worker_node.docker_client.containers.run(
             image=image,
-            command=[config_json],
+            command=[job_args],
             stderr=True,
             environment={
                 "AWS_SECRET_ACCESS_KEY": getenv("AWS_SECRET_ACCESS_KEY"),

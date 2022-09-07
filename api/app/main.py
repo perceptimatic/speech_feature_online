@@ -3,7 +3,7 @@ import logging
 import random
 import string
 from os import path
-from typing import Union
+from typing import List, Union
 
 import boto3
 from celery import Celery, signature
@@ -11,7 +11,7 @@ from celery.backends.database import TaskExtended
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import desc
-from sqlalchemy.orm import Session, Query
+from sqlalchemy.orm import Session, Query, selectinload
 from sqlalchemy.exc import ProgrammingError
 
 from app.database import Base
@@ -32,7 +32,6 @@ from app.util import (
     authenticate_user,
     create_access_token,
     create_user,
-    find,
     get_db,
     get_current_user,
     get_password_hash,
@@ -81,7 +80,7 @@ class PaginationParams:
     desc: Union[bool, None] = (None,)
 
 
-def paginate(query: Query, model: Base, params: PaginationParams):
+async def paginate(query: Query, model: Base, params: PaginationParams):
     """Paginate a query"""
 
     total = query.count()
@@ -106,6 +105,31 @@ async def pagination_params(
 ):
     """Pagination dependency"""
     return PaginationParams(page=page, per_page=per_page, sort=sort, desc=desc)
+
+
+async def load_task_extended(user_tasks: List[UserTask], db: Session):
+    """'Eager load' TaskExtended relation to list of UserTasks"""
+
+    # if no job has been run yet, celery's task tables won't exist, in which case we'll bail with an empty result
+    # would be great if we could check dynamically in relationship but doesn't seem possible :(
+    try:
+        db.query(TaskExtended).first()
+    except ProgrammingError:
+        return []
+
+    tasks = {
+        task.task_id: task
+        for task in db.query(TaskExtended)
+        .filter(TaskExtended.task_id.in_([task.taskmeta_id for task in user_tasks]))
+        .all()
+    }
+
+    for ut in user_tasks:
+        if tasks.get(ut.taskmeta_id):
+            ut.taskmeta = tasks[ut.taskmeta_id]
+            ut.load_can_retry_value()
+
+    return user_tasks
 
 
 # routes
@@ -205,6 +229,24 @@ async def fetch_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@app.get("/api/tasks", response_model=PaginatedOutput[UserTaskOut])
+async def fetch_tasks(
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+    pagination=Depends(pagination_params),
+):
+    """Return all tasks, admin only"""
+    current_user.is_admin_or_403()
+
+    tasks_query = db.query(UserTask).options(selectinload(UserTask.user))
+
+    tasks = await paginate(tasks_query, UserTask, pagination)
+
+    tasks["data"] = await load_task_extended(tasks["data"], db)
+
+    return tasks
+
+
 @app.get("/api/users/{user_id}/tasks", response_model=PaginatedOutput[UserTaskOut])
 async def fetch_user_tasks(
     user_id: int,
@@ -215,31 +257,11 @@ async def fetch_user_tasks(
     """Return the user's tasks"""
     user = await resolve_user(db, current_user, user_id)
 
-    # if no job has been run yet, celery's task tables won't exist, in which case we'll bail with an empty result
-    # would be great if we could check dynamically in relationship but doesn't seem possible :(
-    try:
-        db.query(TaskExtended).first()
-    except ProgrammingError:
-        return []
-
     user_tasks_query = db.query(UserTask).filter(UserTask.user_id == user.id)
 
-    user_tasks = paginate(user_tasks_query, UserTask, pagination)
+    user_tasks = await paginate(user_tasks_query, UserTask, pagination)
 
-    # poor man's eager load -- grab all foreign keys, then do an in statement and bind
-    tasks = {
-        task.task_id: task
-        for task in db.query(TaskExtended)
-        .filter(
-            TaskExtended.task_id.in_([task.taskmeta_id for task in user_tasks["data"]])
-        )
-        .all()
-    }
-
-    for ut in user_tasks["data"]:
-        if tasks.get(ut.taskmeta_id):
-            ut.taskmeta = tasks[ut.taskmeta_id]
-            ut.load_can_retry_value()
+    user_tasks["data"] = await load_task_extended(user_tasks["data"], db)
 
     return user_tasks
 
@@ -261,7 +283,12 @@ async def get_task(
 
     user = await resolve_user(db, current_user, user_id)
 
-    task = find(user.tasks, lambda tsk: tsk.id == task_id)
+    task_query = db.query(UserTask).filter(UserTask.id == task_id)
+
+    if not user.has_role("admin"):
+        task_query = task_query.filter(UserTask.user_id == user_id)
+
+    task = task_query.first()
 
     if not task:
         raise HTTPException(

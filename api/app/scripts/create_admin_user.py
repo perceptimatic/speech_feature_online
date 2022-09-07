@@ -3,7 +3,7 @@ from logging import getLogger
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from app.models import User
+from app.models import Role, User
 from app.database import SessionLocal
 from app.settings import settings
 
@@ -27,6 +27,12 @@ def create_admin_user():
             "active": True,
         }
     )
+
+    user_role = db.query(Role).filter(Role.role == "user").first()
+    admin_role = db.query(Role).filter(Role.role == "admin").first()
+
+    admin_user.roles = [user_role, admin_role]
+
     db.add(admin_user)
     db.commit()
 

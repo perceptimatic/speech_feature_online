@@ -1,7 +1,7 @@
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
-from json import loads
+from json import load, loads
 import logging
 from os import mkdir, path
 from posixpath import basename
@@ -42,8 +42,13 @@ def resolve_processor(class_key: str, init_args: Dict[str, Any]):
 
 @dataclass
 class JobArgs:
-    analyses: Dict[str, Any]
     bucket: str
+    config_path: str
+
+
+@dataclass
+class JobConfig:
+    analyses: Dict[str, Any]
     channel: int
     files: List[str]
     save_path: str
@@ -168,53 +173,45 @@ class LocalFileManager(AbstractContextManager):
 class S3FileManager(LocalFileManager):
     """S3 client provider that employs and overrides local methods as necessary."""
 
-    def __init__(self, save_path: str, bucket_name: str):
+    def __init__(self, bucket_name: str):
         super().__init__()
-        self.save_path = save_path
         self.resource = boto3.resource("s3")
         self.client = boto3.client("s3")
         self.bucket = bucket_name
-        """ store a list of keys that we can remove when we're done """
-        self.removable_keys = []
 
     def load(self, key):
         """Download file from s3 and store both key and local temp path for cleanup"""
         basename = path.basename(key)
         save_path = path.join(self.tmp_download_dir, basename)
         self.resource.Bucket(self.bucket).download_file(key, save_path)
-        self.removable_keys.append(key)
         return save_path
 
-    def remove_temps(self):
-        """Wipe out local temp files and remote upload files"""
-        super().remove_temps()
-        for removable_key in self.removable_keys:
-            """For now we'll keep our test files so we can perform multiple tasks with them without needing
-            to reupload every time.
-            """
-            if not removable_key.startswith("tests/"):
-                self.client.delete_object(Bucket=self.bucket, Key=removable_key)
-
-    def store(self):
+    def store(self, save_path: str):
         """Zip up results, upload to bucket, and queue local zip file for removal"""
         zip_path = self.zip_tmp_files()
-        self.resource.meta.client.upload_file(zip_path, self.bucket, self.save_path)
+        self.resource.meta.client.upload_file(zip_path, self.bucket, save_path)
         return True
 
 
-def process_data(jobargs: JobArgs,) -> str:
+def process_data(job_args: JobArgs,):
     """Process each file passed for analysis"""
 
-    file_paths = jobargs.files
-    res_type = jobargs.res
-    channel = jobargs.channel
-    analysis_settings = jobargs.analyses
+    storage_manager = S3FileManager(job_args.bucket)
 
-    storage_manager = S3FileManager(jobargs.save_path, jobargs.bucket)
+    config_path = storage_manager.load(job_args.config_path)
+
+    with open(config_path) as f:
+        jobconfig = JobConfig(**load(f))
+
+    file_paths = jobconfig.files
+    res_type = jobconfig.res
+    channel = jobconfig.channel
+    analysis_settings = jobconfig.analyses
 
     with storage_manager as manager:
         # shennong the devil outta them:
         for file_path in file_paths:
+
             collection = FeaturesCollection()
             local_path = manager.load(file_path)
             analyser = Analyser(local_path, channel, collection)
@@ -239,7 +236,7 @@ def process_data(jobargs: JobArgs,) -> str:
             analyser.collection.save(outpath, serializer=serializer)
             logger.info(f"saved {file_path}")
 
-        manager.store()
+        manager.store(jobconfig.save_path)
 
     return True
 
@@ -247,6 +244,5 @@ def process_data(jobargs: JobArgs,) -> str:
 if __name__ == "__main__":
     from sys import argv
 
-    analysis_settings = loads(argv[1])
-    config = JobArgs(**analysis_settings)
-    process_data(config)
+    args = loads(argv[1])
+    process_data(JobArgs(**args))

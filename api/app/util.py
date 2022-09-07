@@ -29,7 +29,7 @@ def get_db():
         db.close()
 
 
-def get_user(db: Session, user_id: int):
+def get_user(db: Session, user_id: int) -> User:
     """Fetch a user based on id"""
     return db.query(User).filter(User.id == user_id).first()
 
@@ -74,7 +74,9 @@ def create_access_token(
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db=Depends(get_db)
+) -> User:
     """Resolve user from JWT"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

@@ -48,6 +48,7 @@ class UserTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     taskmeta_id = Column(String(255), nullable=True, unique=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User")
     can_retry = False
     taskmeta = None
 
