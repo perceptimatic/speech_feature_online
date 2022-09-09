@@ -27,12 +27,63 @@ bucket_name=$( cat .env | awk -F= '/BUCKET_NAME/ {print $2}')
 config_json=$(cat <<EOF
 {
     "analyses": {
-        "bottleneck": {
+        "energy": {
             "init_args": {
-                "weights": "BabelMulti",
-                "dither": 0.1
+            "sample_rate": 16000,
+            "frame_shift": 0.01,
+            "frame_length": 0.025,
+            "dither": 1,
+            "preemph_coeff": 0.97,
+            "remove_dc_offset": true,
+            "window_type": "povey",
+            "round_to_power_of_two": true,
+            "blackman_coeff": 0.42,
+            "snip_edges": true,
+            "raw_energy": true,
+            "compression": "log"
             },
             "postprocessors": []
+        },
+        "mfcc": {
+            "init_args": {
+            "sample_rate": 16000,
+            "frame_shift": 0.01,
+            "frame_length": 0.025,
+            "dither": 1,
+            "preemph_coeff": 0.97,
+            "remove_dc_offset": true,
+            "window_type": "povey",
+            "round_to_power_of_two": true,
+            "blackman_coeff": 0.42,
+            "snip_edges": true,
+            "num_bins": 23,
+            "low_freq": 20,
+            "high_freq": 0,
+            "vtln_low": 100,
+            "vtln_high": -500,
+            "num_ceps": 13,
+            "use_energy": true,
+            "energy_floor": 0,
+            "raw_energy": true,
+            "cepstral_lifter": 22,
+            "htk_compat": false
+            },
+            "postprocessors": []
+        },
+        "pitch_crepe": {
+            "init_args": {
+            "model_capacity": "full",
+            "viterbi": true,
+            "center": true,
+            "frame_shift": 0.01,
+            "frame_length": 0.025
+            },
+            "postprocessors": [
+            "vad",
+            "delta",
+            "cmvn",
+            "pitch_crepe"
+            ]
         }
     },
     "channel": 1,
@@ -42,6 +93,8 @@ config_json=$(cat <<EOF
 }
 EOF
 )
+
+
 
 config_key="test-config.json"
 file_key="$(basename "${file_path}")"

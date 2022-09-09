@@ -122,17 +122,19 @@ class LocalFileManager(AbstractContextManager):
         Normally tmp_dir can be ignored; it is used mostly for testing.
         """
 
-        """ Root dir for temp files, to be removed atexit """
+        # Root dir for temp files
         self.tmp_dir = (
             tmp_dir if tmp_dir else path.join(tempfile.gettempdir(), uuid.uuid4().hex)
         )
+
         mkdir(self.tmp_dir)
-        """ Where to store results before zipping"""
+        # Where to store results before zipping
         self.tmp_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
-        """ Where to store downloads before processing """
+        # Where to store downloads before processing """
         self.tmp_download_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
         mkdir(self.tmp_results_dir)
         mkdir(self.tmp_download_dir)
+        self.error_log_path = path.join(self.tmp_results_dir, "error-log.txt")
 
     def __exit__(self, exc_type, exc_value, traceback):
         # temps on filesystem no longer matter b/c node is terminated at job end
@@ -152,6 +154,10 @@ class LocalFileManager(AbstractContextManager):
             f"{path.splitext(path.basename(filepath))[0]}-features{extension}",
         )
         return result_path
+
+    def log_error(self, error: str):
+        with open(self.error_log_path, "a+") as f:
+            f.write(error)
 
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
@@ -219,7 +225,11 @@ def process_data(job_args: JobArgs,):
 
             for k, v in analysis_settings.items():
                 logger.info(f"starting {k}")
-                analyser.process(k, v)
+                try:
+                    analyser.process(k, v)
+                except Exception as e:
+                    logger.error(e)
+                    storage_manager.log_error(f"Failed: {file_path}-{k}")
                 logger.info(f"finished {k}")
             """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
