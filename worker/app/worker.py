@@ -9,6 +9,7 @@ from os import getenv
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 import docker
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -178,7 +179,12 @@ def process_shennong_job(self, config: Dict[str, Any] = None, provider=EC2_Provi
     if config is None:
         raise ValueError("config is required!")
 
-    client = boto3.client("s3")
+    client = boto3.client(
+        "s3",
+        config=Config(
+            signature_version="s3v4",
+        ),
+    )
     save_path = f"{uuid.uuid4().hex}.zip"
     config_path = f"{uuid.uuid4().hex}.json"
     config["save_path"] = save_path
