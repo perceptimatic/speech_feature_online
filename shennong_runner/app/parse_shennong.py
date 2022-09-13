@@ -233,6 +233,4 @@ def build_schema():
 
 
 if __name__ == "__main__":
-    from sys import argv
-
     print(dumps(build_schema()))

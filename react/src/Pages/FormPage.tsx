@@ -249,7 +249,7 @@ const FormPage: React.FC = () => {
 
         for (const analysis in state.analyses!) {
             if (analysis !== k) {
-                analyses[k] = state.analyses[analysis];
+                analyses[analysis] = state.analyses[analysis];
             }
         }
 

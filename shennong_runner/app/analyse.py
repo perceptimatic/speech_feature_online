@@ -157,7 +157,7 @@ class LocalFileManager(AbstractContextManager):
 
     def log_error(self, error: str):
         with open(self.error_log_path, "a+") as f:
-            f.write(error)
+            f.write(f"{error}\n")
 
     def remove_temps(self):
         """Remove directory and contents from registered temp files"""
@@ -229,7 +229,7 @@ def process_data(job_args: JobArgs,):
                     analyser.process(k, v)
                 except Exception as e:
                     logger.error(e)
-                    storage_manager.log_error(f"Failed: {file_path}-{k}")
+                    storage_manager.log_error(f"Failed: {basename(file_path)}-{k}")
                 logger.info(f"finished {k}")
             """ csv serializers save a csv and a json file,
                 so they must be passed a directory path rather than a file path
