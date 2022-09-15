@@ -36,6 +36,7 @@ def delete_expired_files(continuation_token=None):
 
     response = s3.list_objects_v2(**kwargs)
     continuation_token = response.get("NextContinuationToken")
+
     expired = [
         {"Key": obj["Key"]}
         for obj in response["Contents"]
@@ -43,7 +44,7 @@ def delete_expired_files(continuation_token=None):
             datetime.datetime.now(datetime.timezone.utc)
             - obj["LastModified"].replace(tzinfo=datetime.timezone.utc)
         ).days
-        > 8
+        > settings.FILE_EXPIRATION_DAYS
     ]
 
     if expired:

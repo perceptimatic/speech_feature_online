@@ -8,6 +8,7 @@ class Settings:
     LAUNCH_TEMPLATE_ID: str = getenv("LAUNCH_TEMPLATE_ID")
     POSTGRES_CONNECTION_STRING: str = f"postgresql://{getenv('POSTGRES_USER')}:{getenv('POSTGRES_PASSWORD')}@postgres/{getenv('POSTGRES_DB')}"
     PROCESSING_QUEUE: str = getenv("PROCESSING_QUEUE")
+    FILE_EXPIRATION_DAYS: int = int(getenv("FILE_EXPIRATION_DAYS", 7))
     GITHUB_PAT: str = getenv("GITHUB_PAT")
     GITHUB_OWNER: str = getenv("GITHUB_OWNER")
     NOTIFICATION_QUEUE: str = getenv("NOTIFICATION_QUEUE")

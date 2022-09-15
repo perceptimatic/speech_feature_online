@@ -42,6 +42,7 @@ services:
       - AWS_DEFAULT_REGION
       - AWS_SECRET_ACCESS_KEY
       - BUCKET_NAME
+      - FILE_EXPIRATION_DAYS
       - GITHUB_OWNER
       - GITHUB_PAT
       - LAUNCH_TEMPLATE_ID
