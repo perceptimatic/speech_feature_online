@@ -5,6 +5,7 @@ import { UpdatableUser, User } from '../types';
 const useUpdateUser = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
     const [user, setUser] = useState<User>();
 
     const updateUser = useCallback(
@@ -14,6 +15,7 @@ const useUpdateUser = () => {
             try {
                 const result = await _updateUser(userId, payload);
                 setUser(result.data);
+                setSuccess(true);
             } catch (e) {
                 console.error(e);
                 setError(
@@ -26,7 +28,14 @@ const useUpdateUser = () => {
         []
     );
 
-    return { error, updateUser, user, loading };
+    return {
+        error,
+        updateUser,
+        user,
+        loading,
+        success,
+        resetSuccess: () => setSuccess(false),
+    };
 };
 
 export default useUpdateUser;

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import {
     Box,
@@ -83,6 +83,8 @@ const FormPage: React.FC = () => {
     const [submissionError, setSubmissionError] = useState<AxiosError>();
     const [uploadHasFailures, setUploadHasFailures] = useState(false);
     const [uploadSuccess, setUploadSuccess] = useState(false);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const cb = async () => {
@@ -185,10 +187,14 @@ const FormPage: React.FC = () => {
         setInvalidFields(invalid);
     }, [state, schema]);
 
-    const resetForm = () =>
+    const resetForm = () => {
         dispatch({
             type: 'clear',
         });
+        if (jobId) {
+            navigate('/');
+        }
+    };
 
     const update = (
         k: string,
@@ -389,61 +395,71 @@ const FormPage: React.FC = () => {
                     />
                 </Grid>
                 <Grid item container direction="row">
-                    <Grid item container md={4} direction="column">
-                        <Stepper orientation="vertical" activeStep={activeStep}>
-                            <Step
-                                active={activeStep === 1}
-                                completed={!!state.files.length}
-                                sx={{ cursor: 'pointer' }}
+                    <Grid item spacing={2} container md={4} direction="column">
+                        <Grid item>
+                            <Stepper
+                                orientation="vertical"
+                                activeStep={activeStep}
                             >
-                                <StyledStepLabel
-                                    onClick={() => setActiveStep(1)}
+                                <Step
+                                    active={activeStep === 1}
+                                    completed={!!state.files.length}
+                                    sx={{ cursor: 'pointer' }}
                                 >
-                                    Select Files
-                                </StyledStepLabel>
-                                <StepContent>
-                                    <Typography variant="caption">
-                                        Use the button to upload the audio files
-                                        you'd like processed.
-                                    </Typography>
-                                </StepContent>
-                            </Step>
-                            <Step
-                                active={activeStep === 2}
-                                completed={getAtLeastOneFeatureSelected()}
-                                sx={{ cursor: 'pointer' }}
-                            >
-                                <StyledStepLabel
-                                    onClick={() => setActiveStep(2)}
+                                    <StyledStepLabel
+                                        onClick={() => setActiveStep(1)}
+                                    >
+                                        Select Files
+                                    </StyledStepLabel>
+                                    <StepContent>
+                                        <Typography variant="caption">
+                                            Use the button to upload the audio
+                                            files you'd like processed.
+                                        </Typography>
+                                    </StepContent>
+                                </Step>
+                                <Step
+                                    active={activeStep === 2}
+                                    completed={getAtLeastOneFeatureSelected()}
+                                    sx={{ cursor: 'pointer' }}
                                 >
-                                    Select Processors
-                                </StyledStepLabel>
-                                <StepContent>
-                                    <Typography variant="caption">
-                                        Configure your job by selecting
-                                        processors, post-processors, and
-                                        options.
-                                    </Typography>
-                                </StepContent>
-                            </Step>
-                            <Step
-                                active={activeStep === 3}
-                                completed={!!submissionSuccess}
-                                sx={{ cursor: 'pointer' }}
-                            >
-                                <StyledStepLabel
-                                    onClick={() => setActiveStep(3)}
+                                    <StyledStepLabel
+                                        onClick={() => setActiveStep(2)}
+                                    >
+                                        Select Processors
+                                    </StyledStepLabel>
+                                    <StepContent>
+                                        <Typography variant="caption">
+                                            Configure your job by selecting
+                                            processors, post-processors, and
+                                            options.
+                                        </Typography>
+                                    </StepContent>
+                                </Step>
+                                <Step
+                                    active={activeStep === 3}
+                                    completed={!!submissionSuccess}
+                                    sx={{ cursor: 'pointer' }}
                                 >
-                                    Review and Submit
-                                </StyledStepLabel>
-                                <StepContent>
-                                    <Typography variant="caption">
-                                        Review your job and submit for
-                                        processing.
-                                    </Typography>
-                                </StepContent>
-                            </Step>
-                        </Stepper>
+                                    <StyledStepLabel
+                                        onClick={() => setActiveStep(3)}
+                                    >
+                                        Review and Submit
+                                    </StyledStepLabel>
+                                    <StepContent>
+                                        <Typography variant="caption">
+                                            Review your job and submit for
+                                            processing.
+                                        </Typography>
+                                    </StepContent>
+                                </Step>
+                            </Stepper>
+                        </Grid>
+                        {jobId && (
+                            <Grid item>
+                                <Button onClick={resetForm}>Reset</Button>
+                            </Grid>
+                        )}
                     </Grid>
 
                     <Grid

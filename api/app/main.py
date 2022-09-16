@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, Query, selectinload
 from sqlalchemy.exc import ProgrammingError
 
 from app.database import Base
-from app.models import UserTask, update_model
+from app.models import UserTask, update_model, User as UserModel
 from app.schemas import (
     LoginRequest,
     PaginatedOutput,
@@ -301,6 +301,17 @@ async def get_task(
     task.load_can_retry_value()
 
     return task
+
+
+@app.get("/api/users", response_model=List[User])
+async def get_users(
+    request: Request, db=Depends(get_db), current_user=Depends(get_current_user)
+):
+    """Fetch all users"""
+
+    current_user.is_admin_or_403()
+
+    return db.query(UserModel).order_by(UserModel.id).all()
 
 
 @app.post("/api/users", response_model=User)

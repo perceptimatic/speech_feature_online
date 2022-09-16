@@ -76,6 +76,7 @@ interface BaseUser {
 }
 
 export interface UpdatableUser extends BaseUser {
+    active: boolean;
     password: string;
 }
 
@@ -84,6 +85,7 @@ export interface SubmittableUser extends UpdatableUser {
 }
 
 export interface UserModel extends BaseUser {
+    active: boolean;
     created: string;
     email: string;
     id: number;

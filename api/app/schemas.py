@@ -8,6 +8,7 @@ from pydantic.generics import GenericModel
 class UserUpdate(BaseModel):
     """Updatable user"""
 
+    active: Optional[bool] = None
     is_admin: Optional[str] = None
     password: Optional[str] = None
     username: Optional[str] = None
@@ -16,6 +17,7 @@ class UserUpdate(BaseModel):
 class UserIn(BaseModel):
     """User Schema"""
 
+    active: bool
     email: EmailStr
     is_admin: Optional[str] = None
     password: str
@@ -36,6 +38,7 @@ class User(BaseModel):
     """The user model"""
 
     id: int
+    active: bool
     created: datetime
     email: str
     roles: List[Role]

@@ -160,6 +160,7 @@ const RegistrationPage: React.FC = () => {
                                     <Button
                                         disabled={!getFormValid()}
                                         onClick={submitRegistration.bind(null, {
+                                            active: false,
                                             email,
                                             password,
                                             username,

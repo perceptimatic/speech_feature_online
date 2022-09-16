@@ -211,10 +211,7 @@ export const removeFileFromS3 = async (key: string) => {
 export const fetchCurrentUser = async () =>
     axiosClient.get<UserModel>('/api/users/current');
 
-export const fetchJobs = async (pagination: SubmittablePaginationMeta = {}) =>
-    axiosClient.get<PaginatedResult<Job>>(`/api/tasks`, {
-        params: pagination,
-    });
+export const fetchUsers = async () => axiosClient.get<User[]>(`/api/users`);
 
 export const fetchUserJob = async (userId: number, jobId: number) =>
     axiosClient.get<Job>(`/api/users/${userId}/tasks/${jobId}`);
@@ -224,6 +221,11 @@ export const fetchUserJobs = async (
     pagination: SubmittablePaginationMeta = {}
 ) =>
     axiosClient.get<PaginatedResult<Job>>(`/api/users/${userId}/tasks`, {
+        params: pagination,
+    });
+
+export const fetchJobs = async (pagination: SubmittablePaginationMeta = {}) =>
+    axiosClient.get<PaginatedResult<Job>>(`/api/tasks`, {
         params: pagination,
     });
 
