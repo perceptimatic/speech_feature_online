@@ -128,10 +128,13 @@ class LocalFileManager(AbstractContextManager):
         )
 
         mkdir(self.tmp_dir)
+        # Outer dir so user doesn't spill files everywhere when unzipping
+        self.outer_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
         # Where to store results before zipping
-        self.tmp_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
+        self.tmp_results_dir = path.join(self.outer_results_dir, "sfo-results")
         # Where to store downloads before processing """
         self.tmp_download_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
+        mkdir(self.outer_results_dir)
         mkdir(self.tmp_results_dir)
         mkdir(self.tmp_download_dir)
         self.error_log_path = path.join(self.tmp_results_dir, "error-log.txt")
@@ -172,7 +175,7 @@ class LocalFileManager(AbstractContextManager):
     def zip_tmp_files(self):
         """Zip intermediate files"""
         return make_archive(
-            path.join(self.tmp_dir, "sfo-results"), "zip", self.tmp_results_dir,
+            path.join(self.tmp_dir, "sfo-results"), "zip", self.outer_results_dir,
         )
 
 
