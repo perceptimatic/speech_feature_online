@@ -78,5 +78,5 @@ class EC2_Provider(AbstractContextManager):
         update_known_hosts(ipaddr)
         return docker.DockerClient(
             base_url=f"ssh://ubuntu@{ipaddr}",
-            use_ssh_client=True,
+            use_ssh_client=False,
         )
