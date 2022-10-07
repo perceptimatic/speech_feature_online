@@ -13,5 +13,5 @@
     "files": [
         "tests/max-ernst.mp3"
     ],
-    "res": ".npz"
+    "res": ".pkl"
 }

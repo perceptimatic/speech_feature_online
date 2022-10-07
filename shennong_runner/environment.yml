@@ -17,13 +17,13 @@ dependencies:
   - brotlipy=0.7.0=py37h27cfd23_1003
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2022.4.26=h06a4308_0
-  - certifi=2022.5.18.1=py37h06a4308_0
+  - ca-certificates=2022.07.19=h06a4308_0
+  - certifi=2022.9.14=py37h06a4308_0
   - cffi=1.15.0=py37hd667e15_1
   - chardet=3.0.4=py37_1
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - click=8.0.4=py37h06a4308_0
-  - conda=4.13.0=py37h06a4308_0
+  - conda=22.9.0=py37h06a4308_0
   - conda-env=2.6.0=1
   - conda-package-handling=1.8.1=py37h7f8727e_0
   - cryptography=37.0.1=py37h9ce1e76_0
@@ -69,8 +69,9 @@ dependencies:
   - numpy=1.15.4=py37h8b7e671_1002
   - openblas=0.3.3=h9ac9557_1001
   - openh264=2.1.1=h8b12597_0
-  - openssl=1.1.1o=h7f8727e_0
+  - openssl=1.1.1q=h7f8727e_0
   - packaging=21.3=pyhd3eb1b0_0
+  - pandas=1.1.5=py37h2531618_0
   - pathspec=0.7.0=py_0
   - pip=21.2.2=py37h06a4308_0
   - pluggy=1.0.0=py37h06a4308_1
@@ -86,6 +87,7 @@ dependencies:
   - python=3.7.13=h12debd9_0
   - python-dateutil=2.8.2=pyhd3eb1b0_0
   - python_abi=3.7=2_cp37m
+  - pytz=2022.1=py37h06a4308_0
   - pyyaml=5.1.2=py37h516909a_0
   - readline=8.1.2=h7f8727e_1
   - regex=2022.3.15=py37h7f8727e_0
@@ -108,6 +110,7 @@ dependencies:
   - tk=8.6.12=h1ccaba5_0
   - toml=0.10.2=pyhd3eb1b0_0
   - tomli=1.2.2=pyhd3eb1b0_0
+  - toolz=0.11.2=pyhd3eb1b0_0
   - tqdm=4.64.0=py37h06a4308_0
   - typed-ast=1.4.3=py37h7f8727e_1
   - typing_extensions=4.2.0=pyha770c72_1
@@ -120,5 +123,5 @@ dependencies:
   - zipp=3.8.0=pyhd8ed1ab_0
   - zlib=1.2.12=h7f8727e_2
   - pip:
-      - json-tricks==3.15.5
+    - json-tricks==3.15.5
 prefix: /usr/local

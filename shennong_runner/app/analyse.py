@@ -1,16 +1,18 @@
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
-from json import load, loads
+import json
 import logging
 from os import mkdir, path
-from posixpath import basename
+from pathlib import Path
 from shutil import make_archive, rmtree
 import tempfile
 from typing import Any, Dict, List
 import uuid
 
 import boto3
+import numpy as np
+import pandas as pd
 
 from shennong import FeaturesCollection
 from shennong.audio import Audio
@@ -30,7 +32,7 @@ logger.addHandler(ch)
 
 
 with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
-    shennong_schema = loads(f.read())
+    shennong_schema = json.loads(f.read())
 
 
 def resolve_processor(class_key: str, init_args: Dict[str, Any]):
@@ -76,6 +78,31 @@ def resolve_postprocessor(class_key: str, features=None):
     except ImportError:
         module = import_module(f"shennong.processor.{class_key}")
         return module.__dict__[class_name]()
+
+
+def save_result(
+    collection: FeaturesCollection, processor: str, out_path: str, res_type: str
+):
+    # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
+
+    results = {k: v._to_dict(with_properties=False) for k, v in collection.items()}
+    process_times = results[processor]["times"]
+    process_data = results[processor]["data"]
+
+    df = pd.DataFrame(np.hstack((process_times, process_data)))
+
+    timecols = ["start", "end"]
+
+    df.columns = [f"time_{timecols[i]}" for i in range(process_times.shape[1])] + [
+        f"f_{i}" for i in range(process_data.shape[1])
+    ]
+
+    mode = "wb" if res_type == ".pkl" else "w"
+
+    with open(out_path, mode) as f:
+        df.to_pickle(f) if res_type == ".pkl" else df.to_csv(f, index=False)
+
+    return True
 
 
 class Analyser:
@@ -127,36 +154,23 @@ class LocalFileManager(AbstractContextManager):
             tmp_dir if tmp_dir else path.join(tempfile.gettempdir(), uuid.uuid4().hex)
         )
 
-        mkdir(self.tmp_dir)
         # Outer dir so user doesn't spill files everywhere when unzipping
         self.outer_results_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
         # Where to store results before zipping
-        self.tmp_results_dir = path.join(self.outer_results_dir, "sfo-results")
+        self.results_dir = path.join(self.outer_results_dir, "sfo-results")
         # Where to store downloads before processing """
         self.tmp_download_dir = path.join(self.tmp_dir, uuid.uuid4().hex)
+        mkdir(self.tmp_dir)
         mkdir(self.outer_results_dir)
-        mkdir(self.tmp_results_dir)
+        mkdir(self.results_dir)
         mkdir(self.tmp_download_dir)
-        self.error_log_path = path.join(self.tmp_results_dir, "error-log.txt")
+        self.error_log_path = path.join(self.results_dir, "error-log.txt")
 
     def __exit__(self, exc_type, exc_value, traceback):
         # temps on filesystem no longer matter b/c node is terminated at job end
         # leaving base file on S3 so that users can rerun jobs for 7 days
         # self.remove_temps()
         pass
-
-    def get_tmp_result_dir_name(self, name: str):
-        """Create a temporary directory on the local filesystem"""
-        dirpath = path.join(self.tmp_results_dir, name)
-        return dirpath
-
-    def get_tmp_result_path(self, filepath: str, extension: str):
-        """Return the name of a valid filepath for an intermediate file"""
-        result_path = path.join(
-            self.tmp_results_dir,
-            f"{path.splitext(path.basename(filepath))[0]}-features{extension}",
-        )
-        return result_path
 
     def log_error(self, error: str):
         with open(self.error_log_path, "a+") as f:
@@ -190,8 +204,7 @@ class S3FileManager(LocalFileManager):
 
     def load(self, key):
         """Download file from s3 and store both key and local temp path for cleanup"""
-        basename = path.basename(key)
-        save_path = path.join(self.tmp_download_dir, basename)
+        save_path = path.join(self.tmp_download_dir, path.basename(key))
         self.resource.Bucket(self.bucket).download_file(key, save_path)
         return save_path
 
@@ -210,7 +223,7 @@ def process_data(job_args: JobArgs,):
     config_path = storage_manager.load(job_args.config_path)
 
     with open(config_path) as f:
-        jobconfig = JobConfig(**load(f))
+        jobconfig = JobConfig(**json.load(f))
 
     file_paths = jobconfig.files
     res_type = jobconfig.res
@@ -221,33 +234,30 @@ def process_data(job_args: JobArgs,):
         # shennong the devil outta them:
         for file_path in file_paths:
 
-            collection = FeaturesCollection()
-            local_path = manager.load(file_path)
-            analyser = Analyser(local_path, channel, collection)
+            audio_file = manager.load(file_path)
             logger.info(f"starting {file_path}")
 
-            for k, v in analysis_settings.items():
-                logger.info(f"starting {k}")
+            for processor, settings in analysis_settings.items():
+                logger.info(f"starting {processor}")
+                analyser = Analyser(audio_file, channel, FeaturesCollection())
                 try:
-                    analyser.process(k, v)
+                    analyser.process(processor, settings)
                 except Exception as e:
                     logger.error(e)
-                    storage_manager.log_error(f"Failed: {basename(file_path)}-{k}")
-                logger.info(f"finished {k}")
-            """ csv serializers save a csv and a json file,
-                so they must be passed a directory path rather than a file path
-                https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L35  
-            """
-            if res_type == ".csv":
-                serializer = "csv"
-                bname = basename(file_path)
-                outpath = manager.get_tmp_result_dir_name(bname)
-            else:
-                # if not a csv, let shennong resolve the serializer
-                serializer = None
-                outpath = manager.get_tmp_result_path(local_path, res_type)
-            analyser.collection.save(outpath, serializer=serializer)
-            logger.info(f"saved {file_path}")
+                    storage_manager.log_error(
+                        f"Failed: {path.basename(file_path)}-{processor}"
+                    )
+                    continue
+
+                out_path = path.join(
+                    manager.results_dir, f"{Path(file_path).stem}_{processor}{res_type}"
+                )
+                save_result(analyser.collection, processor, out_path, res_type)
+
+                logger.info(f"saved {file_path}")
+
+        with open(path.join(manager.results_dir, "settings.json"), "w") as f:
+            json.dump(jobconfig.analyses, f)
 
         manager.store(jobconfig.save_path)
 
@@ -257,5 +267,5 @@ def process_data(job_args: JobArgs,):
 if __name__ == "__main__":
     from sys import argv
 
-    args = loads(argv[1])
+    args = json.loads(argv[1])
     process_data(JobArgs(**args))

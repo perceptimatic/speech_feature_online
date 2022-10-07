@@ -186,7 +186,7 @@ def process_shennong_job(self, config: Dict[str, Any] = None, provider=EC2_Provi
             signature_version="s3v4",
         ),
     )
-    save_path = f"sfo-results-{uuid.uuid4().hex[:20]}.zip"
+    save_path = f"sfo-results-{config['res'][1:]}-{uuid.uuid4().hex[:20]}.zip"
     config_path = f"{uuid.uuid4().hex}.json"
     config["save_path"] = save_path
     config_json = dumps(config)

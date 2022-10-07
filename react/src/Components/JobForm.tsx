@@ -445,22 +445,29 @@ export const globalDisplayFields: FormItem[] = [
     {
         name: 'res',
         component: 'radio',
-        default: '.npz',
+        default: '.pkl',
         type: 'string',
         label: (
             <>
                 SFO currently supports the{' '}
                 <Link
                     target="_blank"
-                    href="https://docs.scipy.org/doc/numpy-1.9.3/reference/generated/numpy.savez.html#:~:text=compressed%20.npz%20archive-,The%20.,npy%20format."
+                    href="https://docs.python.org/3/library/pickle.html"
                 >
                     {' '}
-                    .npz format
-                </Link>{' '}
-                only
+                    .pkl format
+                </Link>
+                , which will return each result set as a serialized{' '}
+                <Link
+                    target="_blank"
+                    href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html"
+                >
+                    Pandas dataframe
+                </Link>
+                , or csv.
             </>
         ),
-        options: ['.npz'],
+        options: ['.pkl', '.csv'],
         required: true,
     },
 ];

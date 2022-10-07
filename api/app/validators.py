@@ -76,7 +76,7 @@ def _validate_top_level_fields(request: dict):
             ValidationViolation("files", "Files[] must contain at least one file")
         )
 
-    allowed_res = [".npz", ".mat", ".pkl", ".h5f", ".ark", ".csv"]
+    allowed_res = [".pkl", ".csv"]
 
     if not request["res"] in allowed_res:
         violations.append(
