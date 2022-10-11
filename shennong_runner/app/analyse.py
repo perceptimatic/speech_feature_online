@@ -80,27 +80,30 @@ def resolve_postprocessor(class_key: str, features=None):
         return module.__dict__[class_name]()
 
 
-def save_result(
-    collection: FeaturesCollection, processor: str, out_path: str, res_type: str
-):
-    # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
+def save_result(collection: FeaturesCollection, base_save_path: str, res_type: str):
+    """Iterate over results from processer and postprocessors and save"""
+    for processor, v in collection.items():
 
-    results = {k: v._to_dict(with_properties=False) for k, v in collection.items()}
-    process_times = results[processor]["times"]
-    process_data = results[processor]["data"]
+        # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
+        result = v._to_dict(with_properties=False)
 
-    df = pd.DataFrame(np.hstack((process_times, process_data)))
+        process_times = result["times"]
+        process_data = result["data"]
 
-    timecols = ["start", "end"]
+        df = pd.DataFrame(np.hstack((process_times, process_data)))
 
-    df.columns = [f"time_{timecols[i]}" for i in range(process_times.shape[1])] + [
-        f"f_{i}" for i in range(process_data.shape[1])
-    ]
+        timecols = ["start", "end"]
 
-    mode = "wb" if res_type == ".pkl" else "w"
+        df.columns = [f"time_{timecols[i]}" for i in range(process_times.shape[1])] + [
+            f"f_{i}" for i in range(process_data.shape[1])
+        ]
 
-    with open(out_path, mode) as f:
-        df.to_pickle(f) if res_type == ".pkl" else df.to_csv(f, index=False)
+        out_path = path.join(f"{base_save_path}_{processor}{res_type}")
+
+        mode = "wb" if res_type == ".pkl" else "w"
+
+        with open(out_path, mode) as f:
+            df.to_pickle(f) if res_type == ".pkl" else df.to_csv(f, index=False)
 
     return True
 
@@ -249,10 +252,11 @@ def process_data(job_args: JobArgs,):
                     )
                     continue
 
-                out_path = path.join(
-                    manager.results_dir, f"{Path(file_path).stem}_{processor}{res_type}"
+                save_result(
+                    analyser.collection,
+                    path.join(manager.results_dir, f"{Path(file_path).stem}"),
+                    res_type,
                 )
-                save_result(analyser.collection, processor, out_path, res_type)
 
                 logger.info(f"saved {file_path}")
 
