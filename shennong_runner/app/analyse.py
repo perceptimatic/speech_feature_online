@@ -170,24 +170,11 @@ class LocalFileManager(AbstractContextManager):
         self.error_log_path = path.join(self.results_dir, "error-log.txt")
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # temps on filesystem no longer matter b/c node is terminated at job end
-        # leaving base file on S3 so that users can rerun jobs for 7 days
-        # self.remove_temps()
         pass
 
     def log_error(self, error: str):
         with open(self.error_log_path, "a+") as f:
             f.write(f"{error}\n")
-
-    def remove_temps(self):
-        """Remove directory and contents from registered temp files"""
-
-        def log_error(function, path, excinfo):
-            logger.info(excinfo)
-
-        rmtree(self.tmp_dir, onerror=log_error)
-
-        return True
 
     def zip_tmp_files(self):
         """Zip intermediate files"""

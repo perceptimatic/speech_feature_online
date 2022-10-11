@@ -1,11 +1,11 @@
-import pytest
-from os import path
-
 from app.analyse import LocalFileManager
 
 
-@pytest.fixture()
-def local_file_manager(tmpdir):
-    """We'll patch the instance's temp dir with pytest's"""
-    fm = LocalFileManager(path.join(str(tmpdir), "fm-test"))
-    return fm
+def test_tmp_file_paths(tmpdir):
+    tmp_path = tmpdir / "fm-test"
+    fm = LocalFileManager(tmp_path)
+    assert fm.tmp_dir == str(tmp_path)
+    assert str(tmp_path) in fm.outer_results_dir
+    assert str(tmp_path) in fm.results_dir
+    assert "sfo-results" in fm.results_dir
+    assert str(tmp_path) in fm.tmp_download_dir
