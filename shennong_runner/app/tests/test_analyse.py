@@ -7,7 +7,12 @@ from shennong.processor.spectrogram import SpectrogramProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 
-from app.analyse import resolve_processor, resolve_postprocessor, Analyser
+from app.analyse import (
+    get_column_names,
+    resolve_processor,
+    resolve_postprocessor,
+    Analyser,
+)
 
 
 def test_resolve_spectrogram_processor():
@@ -54,9 +59,9 @@ def test_processor_and_postprocessor_with_same_name_are_merged(
     analyser.postprocess = lambda pp, key: calls.append(pp)
     analyser.process(key, deepcopy(settings))
 
-    # result should have only 3 keys b/c postprocessor and processor were merged
+    # result should have only 3 keys b/c eponymous postprocessor output has overwritten processor output
     assert len(analyser.collection.keys()) == 3
-    # we should not have a result in the form of "processorname_postprocessorname" if the two are the same, since they should be merged
+    # we should not have a result in the form of "processorname_postprocessorname" if the two are the same,
     assert "b_b" not in analyser.collection.keys()
     # assert that postprocessor "b" was called first b/c it has same name as main processor and downstream postprocessors depend on its result
     assert "b" == calls[0]
@@ -73,3 +78,10 @@ def test_processor_and_postprocessor_with_same_name_are_merged(
 
     # now should have 4 keys--1 for main processor "d", 3 for postprocessors "a", "b", and "c"
     assert len(analyser.collection.keys()) == 4
+
+
+def test_get_col_names_general():
+    """ Ensure we get what we expect from non-pitch processors """
+    assert get_column_names("energy") == ["energy"]
+    assert get_column_names("vad") == ["voiced"]
+    assert get_column_names("foobar") == None

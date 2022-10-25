@@ -1,3 +1,4 @@
+from concurrent.futures import process
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
@@ -7,7 +8,7 @@ from os import mkdir, path
 from pathlib import Path
 from shutil import make_archive
 import tempfile
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 import uuid
 
 import boto3
@@ -80,8 +81,27 @@ def resolve_postprocessor(class_key: str, features=None):
         return module.__dict__[class_name]()
 
 
-def save_result(collection: FeaturesCollection, base_save_path: str, res_type: str):
-    """Iterate over results from processer and postprocessors and save"""
+def get_column_names(processor: str) -> Union[List[Any], None]:
+    """ If we have feature column names set for the processor, return them. """
+    return {
+        "energy": ["energy"],
+        "vad": ["voiced"],
+        # hard-coding these in for now, but note that raw_log_pitch is also possible, if enabled
+        # since we're not allowing users to change postprocessor settings and instead using the defaults
+        # and because the pitch processors are effectively postprocessors, we won't expect these values to change
+        # but if users gain more control over postprocessor settings, we'll want a more flexible approach
+        "pitch_kaldi": ["pov_feature", "normalized_log_pitch", "delta_pitch",],
+        "pitch_crepe": ["pov_feature", "normalized_log_pitch", "delta_pitch",],
+    }.get(processor)
+
+
+def save_result(
+    primary_processor: str,
+    collection: FeaturesCollection,
+    base_save_path: str,
+    res_type: str,
+):
+    """Iterate over results from processer and postprocessors and save files individually"""
     for processor, v in collection.items():
 
         # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
@@ -94,11 +114,27 @@ def save_result(collection: FeaturesCollection, base_save_path: str, res_type: s
 
         timecols = ["start", "end"]
 
-        df.columns = [f"time_{timecols[i]}" for i in range(process_times.shape[1])] + [
-            f"f_{i}" for i in range(process_data.shape[1])
-        ]
+        col_names = get_column_names(processor)
 
-        out_path = path.join(f"{base_save_path}_{processor}{res_type}")
+        if col_names:
+            assert len(col_names) == process_data.shape[1], "Column-name mismatch!"
+
+        feature_col_names = (
+            col_names if col_names else [f"f_{i}" for i in range(process_data.shape[1])]
+        )
+
+        df.columns = [
+            f"time_{timecols[i]}" for i in range(process_times.shape[1])
+        ] + feature_col_names
+
+        # if this isn't our primary processor, then it's a post-processor, so we append it
+        processor_key = (
+            primary_processor
+            if primary_processor == processor
+            else f"{primary_processor}_{processor}"
+        )
+
+        out_path = path.join(f"{base_save_path}_{processor_key}{res_type}")
 
         mode = "wb" if res_type == ".pkl" else "w"
 
@@ -141,12 +177,11 @@ class Analyser:
         self.collection[key] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
-                # if processor and postprocess have the same name (e.g., crepe & kaldi), then overwrite
-                # processor output with postprocessor output (postprocess is required for these processors)
-                pp_key = key if pp == key else f"{key}_{pp}"
-                logger.info(f"starting {pp_key} postprocessor")
-                self.collection[pp_key] = self.postprocess(pp, key)
-                logger.info(f"finished {pp_key} postprocessor")
+                # if processor and postprocessor have the same name (e.g., crepe & kaldi), we will overwrite
+                # processor output with postprocessor output in collection
+                logger.info(f"starting {pp} postprocessor")
+                self.collection[pp] = self.postprocess(pp, key)
+                logger.info(f"finished {pp} postprocessor")
 
 
 class LocalFileManager(AbstractContextManager):
@@ -247,12 +282,13 @@ def process_data(job_args: JobArgs,):
                     continue
 
                 save_result(
+                    processor,
                     analyser.collection,
                     path.join(manager.results_dir, f"{Path(file_path).stem}"),
                     res_type,
                 )
 
-                logger.info(f"saved {file_path}")
+                logger.info(f"saved {file_path} {processor}")
 
         with open(path.join(manager.results_dir, "settings.json"), "w") as f:
             json.dump(jobconfig.analyses, f)
