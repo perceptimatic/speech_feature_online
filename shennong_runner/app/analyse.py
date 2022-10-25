@@ -5,7 +5,7 @@ import json
 import logging
 from os import mkdir, path
 from pathlib import Path
-from shutil import make_archive, rmtree
+from shutil import make_archive
 import tempfile
 from typing import Any, Dict, List
 import uuid
@@ -130,13 +130,20 @@ class Analyser:
 
     def process(self, key: str, settings: Dict[str, Any]):
         postprocessors = settings["postprocessors"] or []
+
+        # make sure that, if present, the 'eponymous' postprocessor runs first,
+        # as its result is the "base result" that should be passed on to downstream processors
+        postprocessors.sort(key=lambda pp: -1 if pp == key else 0)
+
         if settings["init_args"].get("sample_rate"):
             settings["init_args"]["sample_rate"] = self.sound.sample_rate
         processor = resolve_processor(key, settings["init_args"])
         self.collection[key] = processor.process(self.sound)
         if postprocessors:
             for pp in postprocessors:
-                pp_key = f"{key}_{pp}"
+                # if processor and postprocess have the same name (e.g., crepe & kaldi), then overwrite
+                # processor output with postprocessor output (postprocess is required for these processors)
+                pp_key = key if pp == key else f"{key}_{pp}"
                 logger.info(f"starting {pp_key} postprocessor")
                 self.collection[pp_key] = self.postprocess(pp, key)
                 logger.info(f"finished {pp_key} postprocessor")

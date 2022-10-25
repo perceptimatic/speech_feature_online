@@ -4,7 +4,7 @@ from json import dumps
 from sys import path as syspath
 from typing import List, Type, Union
 
-# make sure the app module in in the python path
+# make sure the app module is in the python path
 syspath.insert(0, "../app.py")
 
 from shennong.processor.base import FeaturesProcessor

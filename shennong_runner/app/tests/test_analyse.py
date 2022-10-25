@@ -1,10 +1,13 @@
-from pytest import raises
+from copy import deepcopy
+from unittest.mock import patch, Mock
 
+from pytest import raises
+from shennong import FeaturesCollection
 from shennong.processor.spectrogram import SpectrogramProcessor
 from shennong.postprocessor.delta import DeltaPostProcessor
 from shennong.postprocessor.cmvn import CmvnPostProcessor
 
-from app.analyse import resolve_processor, resolve_postprocessor
+from app.analyse import resolve_processor, resolve_postprocessor, Analyser
 
 
 def test_resolve_spectrogram_processor():
@@ -32,3 +35,41 @@ def test_resolve_cmvn_postprocessor():
     """Test that an error is raised when the argument is missing"""
     with raises(AttributeError):
         resolve_postprocessor("cmvn")
+
+
+@patch("app.analyse.Audio", load=lambda x: Mock(nchannels=1, sound=True))
+@patch("app.analyse.resolve_processor", return_value=Mock(process=lambda a: True))
+def test_processor_and_postprocessor_with_same_name_are_merged(
+    resolve_processor_mock, audio_mock
+):
+    """ Test that processors that depend on a postprocessor (e.g., kaldi, crepe) merge their results based on naming convention """
+
+    key = "b"
+
+    settings = {"init_args": {}, "postprocessors": ["a", "b", "c"]}
+
+    calls = []
+
+    analyser = Analyser("fakepath", 1, FeaturesCollection())
+    analyser.postprocess = lambda pp, key: calls.append(pp)
+    analyser.process(key, deepcopy(settings))
+
+    # result should have only 3 keys b/c postprocessor and processor were merged
+    assert len(analyser.collection.keys()) == 3
+    # we should not have a result in the form of "processorname_postprocessorname" if the two are the same, since they should be merged
+    assert "b_b" not in analyser.collection.keys()
+    # assert that postprocessor "b" was called first b/c it has same name as main processor and downstream postprocessors depend on its result
+    assert "b" == calls[0]
+
+    calls = []
+
+    key = "d"
+
+    analyser = Analyser("fakepath", 1, FeaturesCollection())
+    analyser.postprocess = lambda pp, key: calls.append(pp)
+    analyser.process(key, deepcopy(settings))
+    # assert that b was not called first, b/c our main processor is "d", which has no corresponding postprocessor
+    assert "b" != calls[0]
+
+    # now should have 4 keys--1 for main processor "d", 3 for postprocessors "a", "b", and "c"
+    assert len(analyser.collection.keys()) == 4
