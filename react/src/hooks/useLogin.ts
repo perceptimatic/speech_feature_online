@@ -13,7 +13,9 @@ const useLogin = () => {
             setError('');
             try {
                 const result = await login(creds);
-                localStorage.setItem('jwt', result.data.access_token);
+                const { access_token, refresh_token } = result.data;
+                localStorage.setItem('access_token', access_token);
+                localStorage.setItem('refresh_token', refresh_token);
                 setSuccess(true);
             } catch (e) {
                 if (axios.isAxiosError(e) && e?.response?.status === 401) {

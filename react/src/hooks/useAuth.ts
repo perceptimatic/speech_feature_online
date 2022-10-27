@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../Pages/BasePage';
-import useFetchCurrentUser from './useFetchCurrentUser';
+import { useFetchCurrentUser, useRefresh } from '.';
 
 const useAuth = (role?: string) => {
     const [userAuthorized, setUserAuthorized] = useState<boolean>(true);
@@ -8,8 +8,12 @@ const useAuth = (role?: string) => {
     const { user: contextUser, setUser: setContextUser } =
         useContext(UserContext);
     const { fetchUser, loading, user } = useFetchCurrentUser();
+    const scheduleRefresh = useRefresh();
+
     useEffect(() => {
-        // prevent console errors and duplicate fetches between first and second tick
+        //order matters
+
+        //prevent console errors and duplicate fetches between first and second tick
         if (!initialized) {
             setInitialized(true);
         }
@@ -17,9 +21,10 @@ const useAuth = (role?: string) => {
             setUserAuthorized(
                 role ? contextUser.roles.map(r => r.role).includes(role) : true
             );
+            scheduleRefresh();
         } else if (user) {
             setContextUser(user);
-        } else if (localStorage.getItem('jwt')) {
+        } else if (localStorage.getItem('access_token')) {
             //interceptor will clean up bad jwt
             fetchUser();
         } else {

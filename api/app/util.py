@@ -1,7 +1,8 @@
 """ Utility functions for use in API routes; use elsewhere will likely result in circular import issues """
 from datetime import datetime, timedelta
 import logging
-from typing import Iterable, Callable
+import random
+import string
 
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -61,12 +62,12 @@ def authenticate_user(db, email: str, password: str):
     return user
 
 
-def create_access_token(
-    data: dict,
-):
+def create_access_token(data: dict, exp_mins: int = None):
     """Create a JWT for the user"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + (
+        timedelta(minutes=(exp_mins or settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGO
@@ -137,11 +138,7 @@ async def create_user(db: Session, user: UserIn, code: str):
     return new_user
 
 
-def find(it: Iterable, cb: Callable):
-    """Return first value that cb returns truthy for"""
-    res = None
-    try:
-        res = next(g for g in it if cb(g))
-    except StopIteration:
-        pass
-    return res
+def make_randomish_string(all_cap=True, k=6):
+    """Generate a randomish string"""
+    letters = string.ascii_uppercase if all_cap else string.ascii_letters
+    return "".join(random.choices(letters + string.digits, k=k))

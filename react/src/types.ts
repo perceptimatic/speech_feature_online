@@ -147,3 +147,8 @@ export interface PaginatedResult<T extends Record<string, any>>
     extends PaginationMeta {
     data: T[];
 }
+
+export interface TokenResponse {
+    access_token: string;
+    refresh_token: string;
+}

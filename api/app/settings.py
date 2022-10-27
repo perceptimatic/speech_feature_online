@@ -4,7 +4,11 @@ from os import getenv, path
 class Settings:
     """App-wide settings"""
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 90
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = (
+        int(getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+        if getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+        else 90
+    )
     APP_ENV: str = getenv("APP_ENV")
     BUCKET_NAME: str = getenv("BUCKET_NAME")
     EMAIL_ALLOWLIST = getenv("EMAIL_ALLOWLIST")

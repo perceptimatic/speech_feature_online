@@ -130,14 +130,6 @@ def attempt_connection(node):
 
 
 @celery_app.task()
-def test(test_arg: str):
-    sleep_time = 5
-    print(f"sleeping {sleep_time}")
-    sleep(sleep_time)
-    return test_arg
-
-
-@celery_app.task()
 def verify_user_email(email_addr: str, verification_code: str):
     """Verify user email"""
     template = jinja_env.get_template("verify-email.html")

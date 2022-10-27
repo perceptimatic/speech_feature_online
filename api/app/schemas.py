@@ -52,7 +52,7 @@ class Token(BaseModel):
     """Token request"""
 
     access_token: str
-    token_type: str
+    refresh_token: str
 
 
 class TokenData(BaseModel):

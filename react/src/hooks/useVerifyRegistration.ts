@@ -14,7 +14,7 @@ const useVerifyRegistration = () => {
             const {
                 data: { access_token },
             } = await verifyRegistration(email, code);
-            localStorage.setItem('jwt', access_token);
+            localStorage.setItem('access_token', access_token);
             setSuccess(true);
         } catch (e) {
             if (axios.isAxiosError(e) && e?.response?.status === 403) {

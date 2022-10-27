@@ -10,16 +10,12 @@ import {
 } from '@mui/material';
 import { Settings } from '@mui/icons-material';
 import { isChrome, isFirefox } from 'react-device-detect';
+import { logout } from '../util';
 import { UserContext } from '../Pages/BasePage';
 import { MenuLink } from '.';
 
 const Header: React.FC = () => {
     const { user } = useContext(UserContext);
-
-    const logout = () => {
-        window.location.assign('/login');
-        localStorage.removeItem('jwt');
-    };
 
     const navigate = useNavigate();
 

@@ -1,7 +1,5 @@
 from dataclasses import asdict, dataclass
 import logging
-import random
-import string
 from os import path
 from typing import List, Union
 
@@ -36,6 +34,7 @@ from app.util import (
     get_current_user,
     get_password_hash,
     get_user_by_email,
+    make_randomish_string,
     resolve_user,
 )
 from app.validators import raise_422, validate_job_request, ValidationViolation
@@ -58,16 +57,9 @@ celery_app = Celery("speech_features", broker="redis://redis:6379/0")
 
 celery_app.conf.task_routes = {
     "app.worker.process_shennong_job": {"queue": settings.PROCESSING_QUEUE},
-    "app.worker.test": {"queue": settings.PROCESSING_QUEUE},
     "app.worker.verify_user_email": {"queue": settings.NOTIFICATION_QUEUE},
     "app.worker.reset_password": {"queue": settings.NOTIFICATION_QUEUE},
 }
-
-# util
-def make_randomish_string(all_cap=True, k=6):
-    """Generat a randomish string"""
-    letters = string.ascii_uppercase if all_cap else string.ascii_letters
-    return "".join(random.choices(letters + string.digits, k=k))
 
 
 @dataclass
@@ -132,7 +124,18 @@ async def load_task_extended(user_tasks: List[UserTask], db: Session):
     return user_tasks
 
 
+def make_tokens(user: User):
+    return (
+        create_access_token(
+            data={"sub": str(user.id), "username": user.username},
+        ),
+        create_access_token(data={"sub": str(user.id)}, exp_mins=720),
+    )
+
+
 # routes
+
+
 @app.get("/api/temp-creds")
 async def get_temp_creds(current_user: User = Depends(get_current_user)):
     """Fetch temporary S3 creds for uploading a file through the front end"""
@@ -208,7 +211,7 @@ async def store_test_job(
 
 @app.post("/api/token", response_model=Token)
 async def login_for_access_token(request: LoginRequest, db: Session = Depends(get_db)):
-    """Authenticate user and return access token"""
+    """Authenticate user and return access token, done at login-time"""
     user = authenticate_user(db, request.email, request.password)
     if not user:
         raise HTTPException(
@@ -216,11 +219,21 @@ async def login_for_access_token(request: LoginRequest, db: Session = Depends(ge
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = create_access_token(
-        data={"sub": str(user.id), "username": user.username},
-    )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token, refresh_token = make_tokens(user)
+
+    return {"access_token": access_token, "refresh_token": refresh_token}
+
+
+@app.post("/api/refresh", response_model=Token)
+async def refresh_access_token(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Validate refresh token, revoke, and send fresh ones"""
+
+    access_token, refresh_token = make_tokens(current_user)
+
+    return {"access_token": access_token, "refresh_token": refresh_token}
 
 
 @app.get("/api/users/current", response_model=User)

@@ -7,6 +7,7 @@ import {
     SubmittableJobConfig,
     SubmittablePaginationMeta,
     SubmittableUser,
+    TokenResponse,
     UpdatableUser,
     UploadResponse,
     User,
@@ -16,10 +17,10 @@ import {
 const axiosClient = axios.create();
 
 axiosClient.interceptors.request.use(config => {
-    if (localStorage.getItem('jwt')) {
+    if (localStorage.getItem('access_token')) {
         config.headers = {
             ...config.headers,
-            Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
         };
     }
     return config;
@@ -29,8 +30,8 @@ axiosClient.interceptors.response.use(
     response => response,
     error => {
         if (error?.response?.status === 401) {
-            if (localStorage.getItem('jwt')) {
-                localStorage.removeItem('jwt');
+            if (localStorage.getItem('access_token')) {
+                localStorage.removeItem('access_token');
             }
             if (window.location.pathname !== '/login') {
                 window.location.pathname = '/login';
@@ -230,7 +231,14 @@ export const fetchJobs = async (pagination: SubmittablePaginationMeta = {}) =>
     });
 
 export const login = async (creds: { email: string; password: string }) =>
-    axiosClient.post<{ access_token: string }>('/api/token', creds);
+    axiosClient.post<TokenResponse>('/api/token', creds);
+
+export const refresh = async (refreshToken: string) => {
+    //bypass the client so we can have our own headers here
+    return axios.create().post<TokenResponse>('/api/refresh', refreshToken, {
+        headers: { AUTHORIZATION: `Bearer ${refreshToken}` },
+    });
+};
 
 export const postFiles = (
     files: File[],
