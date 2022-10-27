@@ -14,7 +14,12 @@ pipeline {
         }
 
         stage('Test, Build, and Push API') {
-            when { changeset 'api/**/*' }
+            when {
+                anyOf {
+                    changeset 'api/**/*'
+                    expression { params.FORCE_API == true }
+                }
+            }
             steps {
                 dir('api') {
                     script {
@@ -34,7 +39,12 @@ pipeline {
         }
 
         stage('Test, Build, and Push Worker') {
-            when { changeset 'worker/**/*' }
+            when {
+                anyOf {
+                    changeset 'worker/**/*'
+                    expression { params.FORCE_WORKER == true }
+                }
+            }
             steps {
                 dir('worker') {
                     script {
@@ -54,7 +64,12 @@ pipeline {
         }
 
         stage('Test, Build, and Push Shennong Runner') {
-            when { changeset 'shennong_runner/**/*' }
+            when {
+                anyOf {
+                    changeset 'shennong_runner/**/*'
+                    expression { params.FORCE_RUNNER == true }
+                }
+            }
             steps {
                 dir('shennong_runner') {
                     script {
@@ -74,7 +89,12 @@ pipeline {
         }
 
         stage('Build React App') {
-            when { changeset 'react/**/*' }
+            when {
+                anyOf {
+                    changeset 'react/**/*'
+                    expression { params.FORCE_REACT == true }
+                }
+            }
             agent {
                 docker {
                     image 'node:latest'
@@ -96,7 +116,12 @@ pipeline {
             }
         }
         stage('Deploy React') {
-            when { changeset 'react/**/*' }
+            when {
+                anyOf {
+                    changeset 'react/**/*'
+                    expression { params.FORCE_REACT == true }
+                }
+            }
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
@@ -105,7 +130,12 @@ pipeline {
             }
         }
         stage('Deploy API') {
-            when { changeset 'api/**/*' }
+            when {
+                anyOf {
+                    changeset 'api/**/*'
+                    expression { params.FORCE_API == true }
+                }
+            }
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
@@ -114,7 +144,12 @@ pipeline {
             }
         }
         stage('Deploy workers') {
-            when { changeset 'worker/**/*' }
+            when {
+                anyOf {
+                    changeset 'worker/**/*'
+                    expression { params.FORCE_WORKER == true }
+                }
+            }
             steps {
                 withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'jenkins-ssh', \
                     keyFileVariable: 'SSHKEY')]) {
