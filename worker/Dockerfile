@@ -1,4 +1,4 @@
-FROM python:3-slim
+FROM python:3.9-slim
 WORKDIR /code
 
 ARG USERNAME=worker
@@ -17,7 +17,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 RUN apt-get update && apt-get install -y \
     openssh-client \
-    build-essential
+    build-essential \
+    libpq-dev
 
 RUN mkdir /home/${USERNAME}/.ssh && \
     chown -R ${USER_UID}:${USER_GID} /home/${USERNAME}/.ssh && \
