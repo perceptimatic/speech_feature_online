@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import inspect
 from json import dumps
 from sys import path as syspath
-from typing import List, Type, Union
+from typing import Any, Dict, List, Type, Union
 
 # make sure the app module is in the python path
 syspath.insert(0, "../app.py")
@@ -78,11 +78,17 @@ processor_options = {
 }
 
 postprocessor_class_map = {
-    "cmvn": CmvnPostProcessor,
-    "delta": DeltaPostProcessor,
-    "pitch_crepe": CrepePitchPostProcessor,
-    "pitch_kaldi": KaldiPitchPostProcessor,
-    "vad": VadPostProcessor,
+    "cmvn": {"class_name": CmvnPostProcessor,},
+    "delta": {"class_name": DeltaPostProcessor},
+    "pitch_crepe": {
+        "class_name": CrepePitchPostProcessor,
+        "default_overrides": {"add_raw_log_pitch": True},
+    },
+    "pitch_kaldi": {
+        "class_name": KaldiPitchPostProcessor,
+        "default_overrides": {"add_raw_log_pitch": True},
+    },
+    "vad": {"class_name": VadPostProcessor},
 }
 
 
@@ -140,7 +146,6 @@ class Arg:
 class ProcessorSpec:
     processor_class: FeaturesProcessor
     init_args: List[Arg] = field(default_factory=list)
-    process_args: List[Arg] = field(default_factory=list)
     required_postprocessors: List[str] = field(default_factory=list)
     valid_postprocessors: List[str] = field(default_factory=list)
 
@@ -148,33 +153,24 @@ class ProcessorSpec:
         return {
             "class_name": self.processor_class.__name__,
             "init_args": [a.toschema() for a in self.init_args],
-            "process_args": [a.toschema() for a in self.process_args],
             "required_postprocessors": self.required_postprocessors,
             "valid_postprocessors": self.valid_postprocessors,
         }
 
 
-@dataclass
-class PostProcessorSpec:
-    base_class: FeaturesPostProcessor
-    init_args: List[Arg] = field(default_factory=list)
-    process_args: List[Arg] = field(default_factory=list)
-
-
-""" factory function for building a processor spec """
-
-
 def build_processor_spec(
     class_key: str,
     Processor: FeaturesProcessor,
-    _valid_postprocessors: List[str] = None,
-    _required_postprocessors: List[str] = None,
+    valid_postprocessors: List[str] = None,
+    required_postprocessors: List[str] = None,
+    default_overrides: Dict[str, Any] = None,
 ):
-    required_postprocessors = (
-        _required_postprocessors if _required_postprocessors else []
-    )
+    """factory function for building a processor spec"""
+    required_postprocessors = required_postprocessors if required_postprocessors else []
 
-    valid_postprocessors = _valid_postprocessors if _valid_postprocessors else []
+    valid_postprocessors = valid_postprocessors if valid_postprocessors else []
+
+    default_overrides = default_overrides if default_overrides else {}
 
     processor = ProcessorSpec(
         processor_class=Processor,
@@ -186,7 +182,11 @@ def build_processor_spec(
     # https://github.com/bootphon/shennong/blob/master/shennong/base.py#L86
     for p in inspect.signature(Processor).parameters.values():
         arg = Arg(p.name)
-        arg.default = p.default
+        arg.default = (
+            default_overrides[p.name]
+            if default_overrides.get(p.name, None)
+            else p.default
+        )
         if arg.type == str:
             try:
                 arg.options = processor_options[class_key][arg.name]
@@ -200,7 +200,6 @@ def build_processor_spec(
             continue
         arg = Arg(v.name)
         arg.default = v.default
-        processor.process_args.append(arg)
 
     return processor
 
@@ -226,7 +225,9 @@ def build_schema():
         schema["processors"][k] = processor.toschema()
 
     for k, v in postprocessor_class_map.items():
-        processor = build_processor_spec(k, v)
+        processor = build_processor_spec(
+            k, v["class_name"], default_overrides=v.get("default_overrides")
+        )
         schema["postprocessors"][k] = processor.toschema()
 
     return schema

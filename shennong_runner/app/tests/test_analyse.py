@@ -1,6 +1,7 @@
 from copy import deepcopy
 from unittest.mock import patch, Mock
 
+import numpy as np
 from pytest import raises
 from shennong import FeaturesCollection
 from shennong.processor.spectrogram import SpectrogramProcessor
@@ -85,3 +86,4 @@ def test_get_col_names_general():
     assert get_column_names("energy") == ["energy"]
     assert get_column_names("vad") == ["voiced"]
     assert get_column_names("foobar") == None
+    assert len(get_column_names("delta", np.array(["a", "b"]))) == 6

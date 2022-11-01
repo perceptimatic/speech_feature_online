@@ -1,4 +1,3 @@
-from concurrent.futures import process
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from importlib import import_module
@@ -14,7 +13,6 @@ import uuid
 import boto3
 import numpy as np
 import pandas as pd
-
 from shennong import FeaturesCollection
 from shennong.audio import Audio
 
@@ -73,73 +71,153 @@ def resolve_postprocessor(class_key: str, features=None):
     if class_key == "cmvn":
         return CmvnWrapper(features.ndims)
     class_name = shennong_schema["postprocessors"][class_key]["class_name"]
+    # we don't allow user to change init args but instead rely
+    init_args = {
+        v["name"]: v["default"]
+        for v in shennong_schema["postprocessors"][class_key]["init_args"]
+    }
     try:
         module = import_module(f"shennong.postprocessor.{class_key}")
-        return module.__dict__[class_name]()
+        return module.__dict__[class_name](**init_args)
     except ImportError:
+        # For crepe and kaldi, postprocessors are located in respective processor module
         module = import_module(f"shennong.processor.{class_key}")
-        return module.__dict__[class_name]()
+        return module.__dict__[class_name](**init_args)
 
 
-def get_column_names(processor: str) -> Union[List[Any], None]:
-    """ If we have feature column names set for the processor, return them. """
+def get_delta_cols(feature_cols: np.array):
+    """
+    Define delta postprocessor columns
+    https://github.com/bootphon/shennong/blob/master/shennong/postprocessor/delta.py#L24-L36
+    """
+    # first n*2 cols are first-order derivatives, next n cols are second-order derivatives
+    first_cols = list(feature_cols)
+    first_order_cols = [
+        col
+        for col in [[f"{col}_d_1", f"{col}_d_1_2"] for col in first_cols]
+        for col in col
+    ]
+    second_order_cols = [f"{col}_d_2" for col in first_cols]
+    return first_order_cols + second_order_cols
+
+
+def get_column_names(
+    processor: str, main_cols: np.array = None
+) -> Union[List[Any], None]:
+    """
+    If we have feature column names set for the processor, return them.
+
+    Parameters
+    ----------
+    processor : str, required
+        The string key of the processor, corresponds to processor-schema.json.
+    main_cols : optional
+        The column names produced by the main processor, needed only for postprocessors who result structure
+        depends on on the structure of the main processor output
+    """
+
+    main_cols = main_cols if main_cols is not None else np.array([])
+
     return {
         "energy": ["energy"],
-        "vad": ["voiced"],
         # hard-coding these in for now, but note that raw_log_pitch is also possible, if enabled
         # since we're not allowing users to change postprocessor settings and instead using the defaults
         # and because the pitch processors are effectively postprocessors, we won't expect these values to change
         # but if users gain more control over postprocessor settings, we'll want a more flexible approach
-        "pitch_kaldi": ["pov_feature", "normalized_log_pitch", "delta_pitch",],
-        "pitch_crepe": ["pov_feature", "normalized_log_pitch", "delta_pitch",],
+        "pitch_crepe": [
+            "pov_feature",
+            "normalized_log_pitch",
+            "delta_pitch",
+            "raw_log_pitch",
+        ],
+        "pitch_kaldi": [
+            "pov_feature",
+            "normalized_log_pitch",
+            "delta_pitch",
+            "raw_log_pitch",
+        ],
+        "vad": ["voiced"],
+        "delta": get_delta_cols(main_cols),
     }.get(processor)
 
 
+def get_times_and_data_cols(feature_item):
+    """Extract time columns and result columns from shennong collection"""
+    # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
+    results = feature_item._to_dict(with_properties=False)
+    return (results["times"], results["data"])
+
+
+def get_feature_col_names(
+    processor_name: str, data: np.array, main_cols: np.array = None
+) -> List[str]:
+
+    col_names = get_column_names(processor_name, main_cols)
+
+    if col_names is not None:
+        assert (
+            len(col_names) == data.shape[1]
+        ), f"Feature column names for {processor_name} are a different size than feature columns!"
+
+    feature_col_names = (
+        col_names if col_names is not None else [f"f_{i}" for i in range(data.shape[1])]
+    )
+
+    return feature_col_names
+
+
 def save_result(
+    processor_result, save_path: str, res_type: str, feature_col_names: list
+):
+
+    process_times, process_data = get_times_and_data_cols(processor_result)
+
+    df = pd.DataFrame(np.hstack((process_times, process_data)))
+
+    timecols = ["start", "end"]
+
+    df.columns = [
+        f"time_{timecols[i]}" for i in range(process_times.shape[1])
+    ] + feature_col_names
+
+    out_path = f"{save_path}{res_type}"
+
+    mode = "wb" if res_type == ".pkl" else "w"
+
+    with open(out_path, mode) as f:
+        df.to_pickle(f) if res_type == ".pkl" else df.to_csv(f, index=False)
+
+
+def save_results(
     primary_processor: str,
     collection: FeaturesCollection,
     base_save_path: str,
     res_type: str,
 ):
-    """Iterate over results from processer and postprocessors and save files individually"""
+    """Iterate over results from processor and postprocessors and save files individually"""
+    _, data = get_times_and_data_cols(collection[primary_processor])
+    main_processor_column_names = get_feature_col_names(primary_processor, data)
+    save_result(
+        collection[primary_processor],
+        f"{base_save_path}_{primary_processor}",
+        res_type,
+        main_processor_column_names,
+    )
+
     for processor, v in collection.items():
-
-        # https://github.com/bootphon/shennong/blob/master/shennong/serializers.py#L230
-        result = v._to_dict(with_properties=False)
-
-        process_times = result["times"]
-        process_data = result["data"]
-
-        df = pd.DataFrame(np.hstack((process_times, process_data)))
-
-        timecols = ["start", "end"]
-
-        col_names = get_column_names(processor)
-
-        if col_names:
-            assert len(col_names) == process_data.shape[1], "Column-name mismatch!"
-
-        feature_col_names = (
-            col_names if col_names else [f"f_{i}" for i in range(process_data.shape[1])]
+        # postprocessors only
+        if processor == primary_processor:
+            continue
+        _, data = get_times_and_data_cols(v)
+        feature_col_names = get_feature_col_names(
+            processor, data, main_processor_column_names
         )
-
-        df.columns = [
-            f"time_{timecols[i]}" for i in range(process_times.shape[1])
-        ] + feature_col_names
-
-        # if this isn't our primary processor, then it's a post-processor, so we append it
-        processor_key = (
-            primary_processor
-            if primary_processor == processor
-            else f"{primary_processor}_{processor}"
+        save_result(
+            v,
+            f"{base_save_path}_{primary_processor}_{processor}",
+            res_type,
+            feature_col_names,
         )
-
-        out_path = path.join(f"{base_save_path}_{processor_key}{res_type}")
-
-        mode = "wb" if res_type == ".pkl" else "w"
-
-        with open(out_path, mode) as f:
-            df.to_pickle(f) if res_type == ".pkl" else df.to_csv(f, index=False)
 
     return True
 
@@ -281,7 +359,7 @@ def process_data(job_args: JobArgs,):
                     )
                     continue
 
-                save_result(
+                save_results(
                     processor,
                     analyser.collection,
                     path.join(manager.results_dir, f"{Path(file_path).stem}"),
