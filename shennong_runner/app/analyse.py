@@ -71,7 +71,7 @@ def resolve_postprocessor(class_key: str, features=None):
     if class_key == "cmvn":
         return CmvnWrapper(features.ndims)
     class_name = shennong_schema["postprocessors"][class_key]["class_name"]
-    # we don't allow user to change init args but instead rely
+    # we don't allow user to change init args but it is possible to override defaults ourselves in the schema
     init_args = {
         v["name"]: v["default"]
         for v in shennong_schema["postprocessors"][class_key]["init_args"]
@@ -90,15 +90,11 @@ def get_delta_cols(feature_cols: np.array):
     Define delta postprocessor columns
     https://github.com/bootphon/shennong/blob/master/shennong/postprocessor/delta.py#L24-L36
     """
-    # first n*2 cols are first-order derivatives, next n cols are second-order derivatives
-    first_cols = list(feature_cols)
-    first_order_cols = [
-        col
-        for col in [[f"{col}_d_1", f"{col}_d_1_2"] for col in first_cols]
-        for col in col
-    ]
-    second_order_cols = [f"{col}_d_2" for col in first_cols]
-    return first_order_cols + second_order_cols
+    # first n cols are original features, next n-cols are first-order derivatives, next n cols are second-order derivatives
+    original_cols = list(feature_cols)
+    first_order_cols = [f"{col}_d_1" for col in original_cols]
+    second_order_cols = [f"{col}_d_2" for col in original_cols]
+    return original_cols + first_order_cols + second_order_cols
 
 
 def get_column_names(
