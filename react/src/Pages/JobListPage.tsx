@@ -21,6 +21,13 @@ const formatDate = (date: string) => {
     return `${parsed.toLocaleDateString()} ${parsed.toLocaleTimeString()}`;
 };
 
+const DEFAULT_PAGINATION = {
+    desc: true,
+    per_page: 5,
+    page: 1,
+    sort: 'created',
+};
+
 const parseAmz = (ts: string) => {
     const y = ts.slice(0, 4);
     const m = ts.slice(4, 6);
@@ -45,7 +52,8 @@ export const getIsExpired = (link: string) => {
 const JobListPage: React.FC = () => {
     const [viewType, setViewType] = useState<'user' | 'all'>('user');
 
-    const [query, setQuery] = useState<SubmittablePaginationMeta>();
+    const [query, setQuery] =
+        useState<SubmittablePaginationMeta>(DEFAULT_PAGINATION);
 
     const { user } = useContext(UserContext);
 
@@ -65,12 +73,7 @@ const JobListPage: React.FC = () => {
 
     useEffect(() => {
         if (viewType) {
-            setQuery({
-                desc: true,
-                per_page: 5,
-                page: 1,
-                sort: 'created',
-            });
+            setQuery(DEFAULT_PAGINATION);
         }
     }, [viewType]);
 
@@ -192,6 +195,16 @@ const JobListPage: React.FC = () => {
         }
     };
 
+    const onPageSizeChange = (per_page: number) => {
+        const current_idx =
+            (query.per_page || DEFAULT_PAGINATION.per_page) *
+            ((query.page || DEFAULT_PAGINATION.per_page) - 1);
+
+        const page = Math.floor(current_idx / per_page) + 1;
+
+        return requery({ page, per_page });
+    };
+
     const requery = (newQuery: SubmittablePaginationMeta) =>
         setQuery({ ...query, ...newQuery });
 
@@ -224,9 +237,7 @@ const JobListPage: React.FC = () => {
                                 disableColumnFilter
                                 //note that mui pagination is 0-indexed but server is 1-indexed
                                 onPageChange={p => requery({ page: p + 1 })}
-                                onPageSizeChange={per_page =>
-                                    requery({ per_page })
-                                }
+                                onPageSizeChange={onPageSizeChange}
                                 onSortModelChange={onSortModelChange}
                                 page={meta?.page ? meta.page - 1 : 0}
                                 paginationMode="server"
