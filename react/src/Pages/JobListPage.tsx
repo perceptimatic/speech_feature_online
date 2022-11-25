@@ -73,7 +73,8 @@ const JobListPage: React.FC = () => {
 
     useEffect(() => {
         if (viewType) {
-            setQuery(DEFAULT_PAGINATION);
+            //pass in new object to trigger requery
+            setQuery({ ...DEFAULT_PAGINATION });
         }
     }, [viewType]);
 
