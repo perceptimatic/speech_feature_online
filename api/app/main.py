@@ -405,10 +405,9 @@ async def verify_user(request: UserVerification, db=Depends(get_db)):
         user.verification_code = None
         user.active = True
         db.commit()
-        access_token = create_access_token(
-            data={"sub": str(user.id), "username": user.username},
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
+        access_token, refresh_token = make_tokens(user)
+
+        return {"access_token": access_token, "refresh_token": refresh_token}
 
     user.verification_code = make_randomish_string()
     user.verification_tries += 1
