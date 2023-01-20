@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-DEV_FLAG=${3:-}
+PROD_FLAG=${3:-}
 
 if [[ -z $1 ]]; then
     echo >&2 "The first argument should be a path to the JSON job configuration file!" && exit 22
@@ -30,8 +30,8 @@ fi
 
 COMPOSE_FILE=docker-compose.yaml
 
-if [[ $DEV_FLAG == '--dev' ]]; then
-    COMPOSE_FILE=docker-compose.dev.yaml
+if [[ $PROD_FLAG == '--prod' ]]; then
+    COMPOSE_FILE=docker-compose.prod.yaml
 fi
 
 CONFIG_FILE_BASENAME=$(basename "${1}")
