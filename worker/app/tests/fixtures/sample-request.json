@@ -1,0 +1,17 @@
+{
+    "analyses": {
+        "bottleneck": {
+            "init_args": {
+                "weights": "BabelMulti",
+                "dither": 0.1
+            },
+            "postprocessors": []
+        }
+    },
+    "channel": 1,
+    "email": "conorklamann@gmail.com",
+    "files": [
+        "tests/max-ernst.mp3"
+    ],
+    "res": ".pkl"
+}

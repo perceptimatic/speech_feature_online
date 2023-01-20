@@ -1,1 +1,0 @@
-window.alert("We're sorry, an error has occurred while processing your file. Please reload Speech Feature Online and try again.")

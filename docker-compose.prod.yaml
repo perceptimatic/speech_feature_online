@@ -1,0 +1,118 @@
+version: "3.6"
+services:
+  api:
+    image: ghcr.io/perceptimatic/sfo-api:latest
+    networks:
+      - speech-feature
+    environment:
+      - ACCESS_TOKEN_EXPIRE_MINUTES
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_DEFAULT_REGION
+      - BUCKET_NAME
+      - EMAIL_ALLOWLIST
+      - FAST_API_DEFAULT_ADMIN_PASSWORD
+      - JWT_SECRET
+      - NOTIFICATION_QUEUE
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - PROCESSING_QUEUE
+    entrypoint: ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80"]
+    restart: always
+  worker: &queue-worker
+    image: ghcr.io/perceptimatic/sfo-worker:latest
+    restart: always
+    networks:
+      - speech-feature
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: sfo-workers
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_DEFAULT_REGION
+      - AWS_SECRET_ACCESS_KEY
+      - BUCKET_NAME
+      - LAUNCH_TEMPLATE_ID
+      - FILE_EXPIRATION_DAYS
+      - GITHUB_PAT
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - NOTIFICATION_QUEUE
+      - PROCESSING_QUEUE
+      - GITHUB_OWNER
+      - SENDER_EMAIL
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_LOGIN
+      - SMTP_PASSWORD
+      - WORKER_CONCURRENCY
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
+    volumes:
+      - ./ec2-private-key.pem:/home/worker/.ssh/id_rsa:ro
+  notification-worker:
+    <<: *queue-worker
+    # celery is the queue that beat-scheduler pushes to
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE},celery" ]
+  beat-scheduler:
+    <<: *queue-worker
+    entrypoint: [ "celery", "-A", "app.worker", "beat"]
+  redis:
+    image: redis:latest
+    restart: always
+    networks:
+      - speech-feature
+  flower:
+    image: mher/flower
+    restart: always
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_USERNAME
+      - FLOWER_PASSWORD
+    depends_on:
+      - worker
+    networks:
+      - speech-feature
+    command: celery flower --url_prefix=flower --basic_auth=${FLOWER_USERNAME}:${FLOWER_PASSWORD}
+  postgres:
+    image: postgres:latest
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - POSTGRES_ROOT_PASSWORD
+    networks:
+      - speech-feature
+  nginx:
+    restart: always
+    image: nginx:1.20
+    environment:
+      - PRIVKEY_PATH
+      - FULLCHAIN_PATH
+    volumes:
+      - ./nginx:/etc/nginx
+      - ${FULLCHAIN_PATH}:/etc/nginx/ssl/certs/fullchain.pem:ro
+      - ${PRIVKEY_PATH}:/etc/nginx/ssl/certs/privkey.pem:ro
+      - ./react/dist:/usr/share/nginx/html
+    networks:
+      - speech-feature
+    depends_on:
+      - flower
+      - api
+      - worker
+    ports:
+      - 80:80
+      - 443:443
+networks:
+  speech-feature:
+volumes:
+  db-data:

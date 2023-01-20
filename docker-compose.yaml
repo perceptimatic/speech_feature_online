@@ -1,0 +1,131 @@
+version: "3.6"
+services:
+  api:
+    image: ghcr.io/perceptimatic/sfo-api:latest
+    build:
+      context: ./api
+    ports:
+      - ${APP_PORT}:80
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - ACCESS_TOKEN_EXPIRE_MINUTES
+      - API_HOST_PORT
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_DEFAULT_REGION
+      - BUCKET_NAME
+      - EMAIL_ALLOWLIST
+      - FAST_API_DEFAULT_ADMIN_PASSWORD
+      - FAST_API_DEBUG
+      - JWT_SECRET
+      - NOTIFICATION_QUEUE
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - PROCESSING_QUEUE
+    volumes:
+      - ./api:/code
+    networks:
+      - speech-feature
+  worker: &queue-worker
+    image: ghcr.io/perceptimatic/sfo-worker:latest
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    build:
+      context: ./worker
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_DEFAULT_REGION
+      - AWS_SECRET_ACCESS_KEY
+      - BUCKET_NAME
+      - FILE_EXPIRATION_DAYS
+      - GITHUB_OWNER
+      - GITHUB_PAT
+      - LAUNCH_TEMPLATE_ID
+      - NOTIFICATION_QUEUE
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - PROCESSING_QUEUE
+      - SENDER_EMAIL
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_LOGIN
+      - SMTP_PASSWORD
+      - WORKER_CONCURRENCY
+      - WORKER_DEBUG
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${PROCESSING_QUEUE}" ]
+    volumes:
+      - ./worker:/code
+      - ./ec2-private-key.pem:/home/worker/.ssh/id_rsa:ro
+    networks:
+      - speech-feature
+  notification-worker: 
+    <<: *queue-worker
+    volumes:
+      - ./worker:/code
+    # celery is the queue that beat-scheduler pushes to
+    entrypoint: [ "celery", "-A", "app.worker", "worker", "-E",  "-O", "fair", "-l", "info", "-Q", "${NOTIFICATION_QUEUE},celery" ]
+  react:
+    image: node:latest
+    volumes:
+      - ./react:/usr/app
+    environment:
+      - API_HOST_PORT
+      - AWS_DEFAULT_REGION
+      - BUCKET_NAME
+      - REACT_PORT
+      - REACT_TMP_CRED_ENDPOINT
+    working_dir: /usr/app
+    networks:
+      - speech-feature
+    entrypoint: "yarn start"
+    ports:
+      - ${REACT_PORT}:${REACT_PORT}
+  redis:
+    image: redis:latest
+    networks:
+      - speech-feature
+  shennong-runner:
+    image: ghcr.io/perceptimatic/sfo-shennong-runner:latest
+    build:
+      context: ./shennong_runner
+    restart: "no"
+    # we don't want this to actually start
+    entrypoint: /bin/true
+    volumes:
+      - ./shennong_runner:/code
+  flower:
+    image: mher/flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - worker
+      - postgres
+      - redis
+    ports:
+      - 5555:5555
+    networks:
+      - speech-feature
+  postgres:
+    image: postgres:latest
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - POSTGRES_ROOT_PASSWORD
+    networks:
+      - speech-feature
+networks:
+  speech-feature:
+volumes:
+  db-data:
