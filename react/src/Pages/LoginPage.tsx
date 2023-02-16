@@ -79,12 +79,14 @@ const LoginPage: React.FC = () => {
                                     <TextField
                                         error={!emailIsValid()}
                                         helperText={
-                                            !emailIsValid &&
+                                            !emailIsValid() &&
                                             'Please enter a valid email'
                                         }
                                         label={'email'}
                                         onChange={e =>
-                                            setEmail(e.currentTarget.value)
+                                            setEmail(
+                                                e.currentTarget.value.trim()
+                                            )
                                         }
                                         value={email}
                                     />
