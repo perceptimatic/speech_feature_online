@@ -97,11 +97,11 @@ const UploadProgressBar: React.FC<UploadProgressBarProps> = ({
             flexGrow={1}
             alignItems="center"
         >
-            <Grid item xs={3}>
+            <Grid item xs={6} md={4}>
                 <Typography variant="caption">{`${progress.key} (${index})`}</Typography>
                 :
             </Grid>
-            <Grid item xs={9}>
+            <Grid item xs={3} md={8}>
                 <LinearProgress
                     variant="determinate"
                     value={progress.getRemaining()}

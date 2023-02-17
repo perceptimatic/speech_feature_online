@@ -1,14 +1,23 @@
-import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useContext, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Alert,
     AppBar,
+    Container,
     Grid,
     IconButton,
+    Menu,
+    MenuItem,
     Toolbar,
     Typography,
+    useMediaQuery,
+    useTheme,
 } from '@mui/material';
-import { Settings } from '@mui/icons-material';
+import {
+    LogoutOutlined,
+    Menu as MenuIcon,
+    Settings,
+} from '@mui/icons-material';
 import { isChrome, isFirefox } from 'react-device-detect';
 import { logout } from '../util';
 import { UserContext } from '../Pages/BasePage';
@@ -19,83 +28,222 @@ const Header: React.FC = () => {
 
     const navigate = useNavigate();
 
+    const { pathname } = useLocation();
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
+        null
+    );
+
+    const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorElNav(event.currentTarget);
+    };
+
+    const handleCloseNavMenu = () => {
+        setAnchorElNav(null);
+    };
+
+    const pages = useMemo(
+        () => [
+            {
+                title: 'New Job',
+                target: '/',
+                display: () => pathname !== '/',
+            },
+            {
+                title: 'View Jobs',
+                target: '/jobs',
+                display: () => pathname !== '/jobs',
+            },
+            {
+                title: 'About',
+                target: '/about',
+                display: () => pathname !== '/about',
+            },
+            {
+                title: 'User Settings',
+                target: '/settings',
+                display: () => isMobile && pathname !== '/settings',
+            },
+        ],
+        [pathname, isMobile]
+    );
+
     return (
         <>
             <AppBar position="fixed">
-                <Toolbar>
-                    <Grid container direction="column">
-                        <Grid
-                            container
-                            item
-                            alignItems="center"
-                            sx={{ padding: 1 }}
-                        >
-                            <Grid container item xs={6}>
-                                <Typography variant="h5">
-                                    <MenuLink href="/">
-                                        Speech Feature Online
-                                    </MenuLink>
-                                </Typography>
-                            </Grid>
+                <Container maxWidth="xl">
+                    <Toolbar>
+                        <Grid container direction="column">
                             <Grid
                                 alignItems="center"
                                 container
-                                spacing={2}
+                                wrap="nowrap"
                                 item
-                                xs={6}
-                                justifyContent="flex-end"
+                                sx={{ padding: 1 }}
                             >
-                                <Grid item>
-                                    <MenuLink href="about">About</MenuLink>
-                                </Grid>
-                                {user ? (
-                                    <>
+                                <Grid
+                                    alignItems="center"
+                                    container
+                                    item
+                                    spacing={3}
+                                    wrap="nowrap"
+                                >
+                                    {!isMobile && (
                                         <Grid item>
-                                            <Typography>
-                                                Hello, {user.username}!
+                                            <Typography
+                                                sx={{ whiteSpace: 'nowrap' }}
+                                                variant="h5"
+                                            >
+                                                Speech Features Online
                                             </Typography>
                                         </Grid>
-                                        <Grid item>
+                                    )}
+                                    {user && !isMobile ? (
+                                        <Grid
+                                            item
+                                            wrap="nowrap"
+                                            container
+                                            spacing={2}
+                                            sx={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            {pages.map(
+                                                p =>
+                                                    p.display() && (
+                                                        <Grid
+                                                            item
+                                                            key={p.target}
+                                                        >
+                                                            <MenuLink
+                                                                href={p.target}
+                                                            >
+                                                                {p.title}
+                                                            </MenuLink>
+                                                        </Grid>
+                                                    )
+                                            )}
+                                        </Grid>
+                                    ) : user ? (
+                                        <Grid item container>
                                             <IconButton
-                                                onClick={() =>
-                                                    navigate('/settings')
-                                                }
-                                                sx={{
-                                                    color: theme =>
-                                                        theme.palette.primary
-                                                            .contrastText,
-                                                }}
+                                                size="large"
+                                                onClick={handleOpenNavMenu}
+                                                color="inherit"
                                             >
-                                                <Settings />
+                                                <MenuIcon />
                                             </IconButton>
+                                            <Menu
+                                                id="menu-appbar"
+                                                anchorEl={anchorElNav}
+                                                anchorOrigin={{
+                                                    vertical: 'bottom',
+                                                    horizontal: 'left',
+                                                }}
+                                                keepMounted
+                                                transformOrigin={{
+                                                    vertical: 'top',
+                                                    horizontal: 'left',
+                                                }}
+                                                open={!!anchorElNav}
+                                                onClose={handleCloseNavMenu}
+                                            >
+                                                {pages.map(p => (
+                                                    <MenuItem
+                                                        key={p.target}
+                                                        onClick={() => {
+                                                            navigate(p.target);
+                                                            handleCloseNavMenu();
+                                                        }}
+                                                    >
+                                                        {p.title}
+                                                    </MenuItem>
+                                                ))}
+                                                <MenuItem onClick={logout}>
+                                                    Logout
+                                                </MenuItem>
+                                            </Menu>
                                         </Grid>
-                                        <Grid item>
-                                            <MenuLink href="/">
-                                                New job
-                                            </MenuLink>
-                                        </Grid>
-                                        <Grid item>
-                                            <MenuLink href="/jobs">
-                                                View jobs
-                                            </MenuLink>
-                                        </Grid>
-                                        <Grid item>
-                                            <MenuLink href="#" onClick={logout}>
-                                                Logout
-                                            </MenuLink>
-                                        </Grid>
-                                    </>
-                                ) : (
-                                    <Grid item>
-                                        <MenuLink href="/login">
-                                            Log In
-                                        </MenuLink>
+                                    ) : null}
+                                </Grid>
+                                {isMobile && (
+                                    <Grid
+                                        container
+                                        item
+                                        justifyContent="center"
+                                    >
+                                        <Typography
+                                            sx={{ whiteSpace: 'nowrap' }}
+                                            variant="h3"
+                                        >
+                                            SFO
+                                        </Typography>
                                     </Grid>
                                 )}
+                                <Grid
+                                    alignItems="center"
+                                    container
+                                    spacing={2}
+                                    item
+                                    justifyContent="flex-end"
+                                >
+                                    {user ? (
+                                        <>
+                                            <Grid item>
+                                                <Typography>
+                                                    Hello, {user.username}!
+                                                </Typography>
+                                            </Grid>
+                                            {!isMobile && (
+                                                <>
+                                                    <Grid item>
+                                                        <IconButton
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    '/settings'
+                                                                )
+                                                            }
+                                                            sx={{
+                                                                color: theme =>
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .contrastText,
+                                                            }}
+                                                        >
+                                                            <Settings />
+                                                        </IconButton>
+                                                    </Grid>
+                                                    <Grid item>
+                                                        <IconButton
+                                                            onClick={logout}
+                                                            sx={{
+                                                                color: theme =>
+                                                                    theme
+                                                                        .palette
+                                                                        .primary
+                                                                        .contrastText,
+                                                            }}
+                                                        >
+                                                            <LogoutOutlined />
+                                                        </IconButton>
+                                                    </Grid>
+                                                </>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Grid item>
+                                            <MenuLink href="/login">
+                                                Log In
+                                            </MenuLink>
+                                        </Grid>
+                                    )}
+                                </Grid>
                             </Grid>
                         </Grid>
-                    </Grid>
-                </Toolbar>
+                    </Toolbar>
+                </Container>
             </AppBar>
             <Toolbar />
             {!isChrome && !isFirefox && (

@@ -933,12 +933,12 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
     missingOnClick,
 }) => (
     <Grid container direction="row" item>
-        <Grid xs={2} item>
+        <Grid xs={6} md={2} item>
             <Typography>
                 <strong>{label}</strong>
             </Typography>
         </Grid>
-        <Grid xs={10} item>
+        <Grid xs={6} md={10} item>
             {content ? (
                 <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
                     <Typography>{content}</Typography>
