@@ -9,4 +9,4 @@ echo $PAT | docker login ghcr.io -u $OWNER --password-stdin
 
 docker pull ghcr.io/${OWNER}/sfo-api:latest
 
-docker-compose -f docker-compose.prod.yaml up -d api
+docker compose -f docker-compose.prod.yaml up -d api

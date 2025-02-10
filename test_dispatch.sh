@@ -37,7 +37,7 @@ fi
 CONFIG_FILE_BASENAME=$(basename "${1}")
 AUDIO_FILE_BASENAME=$(basename "${2}")
 
-docker-compose \
+docker compose \
     -f \
     $COMPOSE_FILE \
     run \
