@@ -11,6 +11,7 @@ from shennong.processor.base import FeaturesProcessor
 from shennong.processor.bottleneck import BottleneckProcessor
 from shennong.processor.energy import EnergyProcessor
 from shennong.processor.filterbank import FilterbankProcessor
+from shennong.processor.hubert import HubertProcessor
 from shennong.processor.mfcc import MfccProcessor
 from shennong.processor.pitch_crepe import CrepePitchProcessor, CrepePitchPostProcessor
 from shennong.processor.pitch_kaldi import KaldiPitchProcessor, KaldiPitchPostProcessor
@@ -36,8 +37,18 @@ processor_class_map = {
         "class_name": FilterbankProcessor,
         "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
+    "hubert_large_ls960_ft": {
+        "class_name": HubertProcessor,
+        "default_overrides": {"model_path": "facebook/hubert-large-ls960-ft"},
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
+    },
     "mfcc": {
         "class_name": MfccProcessor,
+        "valid_postprocessors": ["cmvn", "delta", "vad"],
+    },
+    "mHuBERT_147": {
+        "class_name": HubertProcessor,
+        "default_overrides": {"model_path": "utter-project/mHuBERT-147"},
         "valid_postprocessors": ["cmvn", "delta", "vad"],
     },
     "pitch_crepe": {
@@ -63,6 +74,8 @@ processor_class_map = {
 
 window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
 
+layer_types = ["encoder", "convolutional"]
+
 processor_options = {
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/bottleneck.py#L509
     "bottleneck": {"weights": ["BabelMulti", "FisherMono", "FisherMulti"]},
@@ -70,7 +83,9 @@ processor_options = {
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/energy.py#L26
     "energy": {"window_type": window_options, "compression": ["log", "sqrt", "off"]},
     "filterbank": {"window_type": window_options,},
+    "hubert_large_ls960_ft": {"enc_layer": [str(x) for x in range(1, 25)], "layer_type": layer_types,},
     "mfcc": {"window_type": window_options,},
+    "mHuBERT_147": {"enc_layer": [str(x) for x in range(1, 12)], "layer_type": layer_types,},
     "plp": {"window_type": window_options,},
     "spectrogram": {"window_type": window_options,},
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py#L156
@@ -221,6 +236,7 @@ def build_schema():
             v["class_name"],
             v["valid_postprocessors"],
             v.get("required_postprocessors"),
+            default_overrides=v.get("default_overrides")
         )
         schema["processors"][k] = processor.toschema()
 

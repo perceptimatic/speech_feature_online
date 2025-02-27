@@ -394,6 +394,14 @@ export const argumentDisplayFields: FieldDisplaySchema = {
         component: 'number',
         label: 'Frame length (seconds)',
     },
+    enc_layer: {
+        component: 'radio',
+        label: 'Layer number',
+    },
+    layer_type: {
+        component: 'radio',
+        label: 'Layer type',
+    },
     max_f0: {
         component: 'number',
         label: 'FO max (Hz)',
@@ -485,9 +493,17 @@ export const analysisDisplayFields: FieldDisplaySchema = {
         component: 'checkbox',
         label: 'Filterbank',
     },
+    hubert_large_ls960_ft: {
+        component: 'checkbox',
+        label: 'Facebook large HuBERT finetuned on 960h of librispeech',
+    },
     mfcc: {
         component: 'checkbox',
         label: 'MFCC',
+    },
+    mHuBERT_147: {
+        component: 'checkbox',
+        label: 'mHuBERT-147',
     },
     pitch_crepe: {
         component: 'checkbox',
