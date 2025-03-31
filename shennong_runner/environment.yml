@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - coml
 dependencies:
+  - boto3
   - python>=3.7
   - shennong-pykaldi
   - ffmpeg
@@ -13,6 +14,7 @@ dependencies:
   # shennong-pykaldi is compiled on numpy-1.15, so shennong must stay on the
   # 1.15 version
   - numpy==1.15.*
+  - pandas
   - pip
   - pydub
   - pytest>=5.0
