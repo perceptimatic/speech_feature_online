@@ -41,6 +41,11 @@ def check_type(userval: Any, spec: Any):
         if spec.get("options"):
             return userval in spec["options"]
         return isinstance(userval, str)
+    
+    if spec["type"] == "tuple":
+        if spec.get("options"):
+            return userval in spec["options"]
+        return isinstance(userval, tuple)
 
     elif spec["type"] == "integer":
         return isinstance(userval, int)

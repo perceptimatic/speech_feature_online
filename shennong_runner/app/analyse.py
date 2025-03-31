@@ -36,8 +36,7 @@ with open(path.join(app_settings.PROJECT_ROOT, "processor-schema.json")) as f:
 
 def resolve_processor(class_key: str, init_args: Dict[str, Any]):
     class_name = shennong_schema["processors"][class_key]["class_name"]
-    module = import_module(f"shennong.processor.{class_key}")
-    cls = module.__dict__[class_name]
+    cls = getattr(import_module(f"shennong.processor"), class_name)
     return cls(**init_args)
 
 

@@ -38,7 +38,7 @@ export interface AnalysisFormGroup {
 export interface FormItem extends ProcessorFieldSchema, FieldDisplayItem {}
 
 export interface FieldDisplayItem {
-    component: 'checkbox' | 'text' | 'radio' | 'number';
+    component: 'checkbox' | 'text' | 'radio' | 'number' | 'select';
     helpLinks?: { label: string; href: string }[];
     label?: string | JSX.Element;
 }
@@ -60,10 +60,10 @@ export interface PostprocessorSchema {
 
 export interface ProcessorFieldSchema {
     name: string;
-    type: 'string' | 'integer' | 'number' | 'boolean';
-    default: string | number | boolean;
+    type: 'string' | 'integer' | 'number' | 'boolean' | 'tuple';
+    default: string | number | boolean | Array<string>;
     required: boolean;
-    options?: string[] | number[];
+    options?: string[] | number[] | Array<string>[];
 }
 
 export interface ProcessorSchema extends PostprocessorSchema {
