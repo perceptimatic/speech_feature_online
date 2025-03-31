@@ -20,7 +20,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 COPY ./environment.yml .
 
-RUN conda env update --name base --file environment.yml 
+RUN conda env update --name base --file environment.yml
+
+COPY ./requirements.txt .
+
+RUN pip install -r requirements.txt
 
 COPY . .
 
