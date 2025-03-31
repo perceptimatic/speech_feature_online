@@ -1,4 +1,3 @@
-version: "3.6"
 services:
   api:
     image: ghcr.io/perceptimatic/sfo-api:latest
