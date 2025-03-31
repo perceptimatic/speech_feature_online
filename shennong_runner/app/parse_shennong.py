@@ -74,8 +74,6 @@ processor_class_map = {
 
 window_options = ["hamming", "hanning", "povey", "rectangular", "blackman"]
 
-layer_types = ["encoder", "convolutional"]
-
 processor_options = {
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/bottleneck.py#L509
     "bottleneck": {"weights": ["BabelMulti", "FisherMono", "FisherMulti"]},
@@ -83,9 +81,9 @@ processor_options = {
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/energy.py#L26
     "energy": {"window_type": window_options, "compression": ["log", "sqrt", "off"]},
     "filterbank": {"window_type": window_options,},
-    "hubert_large_ls960_ft": {"enc_layer": [str(x) for x in range(1, 25)], "layer_type": layer_types,},
+    "hubert_large_ls960_ft": {"layer_info": [("convolutional" , str(x)) for x in range(1, 8)] + [("encoder", str(x)) for x in range(1, 25)],},
     "mfcc": {"window_type": window_options,},
-    "mHuBERT_147": {"enc_layer": [str(x) for x in range(1, 12)], "layer_type": layer_types,},
+    "mHuBERT_147": {"layer_info": [("convolutional" , str(x)) for x in range(1, 8)] + [("encoder", str(x)) for x in range(1, 13)],},
     "plp": {"window_type": window_options,},
     "spectrogram": {"window_type": window_options,},
     # https://github.com/bootphon/shennong/blob/master/shennong/processor/vtln.py#L156
@@ -118,6 +116,8 @@ def stringify_type(t: Union[Type, None]):
         return "number"
     elif t == int:
         return "integer"
+    elif t == tuple:
+        return "tuple"
     raise ValueError(f"Unknown type {t}!")
 
 
@@ -202,7 +202,7 @@ def build_processor_spec(
             if default_overrides.get(p.name, None)
             else p.default
         )
-        if arg.type == str:
+        if arg.type == str or arg.type == tuple:
             try:
                 arg.options = processor_options[class_key][arg.name]
             except KeyError:
