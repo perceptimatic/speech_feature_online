@@ -1,5 +1,5 @@
 fairseq
-git+https://github.com/michaelong7/shennong.git
+git+https://github.com/bootphon/shennong.git
 json-tricks==3.15.*
 pip
 sox  # pysox
