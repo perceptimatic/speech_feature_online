@@ -24,7 +24,7 @@ RUN conda env update --name base --file environment.yml
 
 COPY ./requirements.txt .
 
-RUN pip install -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
 
 COPY . .
 
