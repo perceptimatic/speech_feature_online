@@ -8,9 +8,11 @@ import {
     Link,
     List,
     ListItem,
+    MenuItem,
     Popover,
     Radio,
     RadioGroup,
+    Select,
     TextField,
     Typography,
 } from '@mui/material';
@@ -23,6 +25,7 @@ import {
     JobConfig,
 } from '../types';
 import { capitalize } from '../util';
+import { eventNames } from 'process';
 
 interface Action {
     payload?: Partial<JobConfig>;
@@ -128,10 +131,12 @@ const resolveInputComponent = (config: FormItem) => {
             return 'number';
         case 'string':
             return 'radio';
+        case 'tuple':
+            return 'select';
     }
 };
 
-export default function JobFormField<K extends boolean | string | number>({
+export default function JobFormField<K extends boolean | string | number | Array<string>>({
     config,
     disabled,
     update,
@@ -198,14 +203,41 @@ export default function JobFormField<K extends boolean | string | number>({
                     <RadioGroup row defaultValue={config.default}>
                         {(config.options || []).map(o => (
                             <FormControlLabel
-                                key={o}
+                                key={o.toString()}
                                 onChange={() => update(o)}
-                                value={o}
+                                value={o.toString()}
                                 control={<Radio />}
                                 label={capitalize(o.toString())}
                             />
                         ))}
                     </RadioGroup>
+                </FormControl>
+            );
+        case 'select':
+            return (
+                <FormControl disabled={disabled} key={config.name}>
+                    <FormLabel
+                            sx={{
+                                marginRight: 1,
+                                color: theme => theme.palette.text.primary,
+                            }}
+                        >
+                            <Label
+                                labelText={config.label || ''}
+                                helpLinks={config.helpLinks}
+                            />
+                        </FormLabel>
+                    <Select defaultValue={config.default}
+                    value={value}
+                    onChange={(event) => update(event.target.value)}>
+                        {(config.options || []).map(o => (
+                            <MenuItem 
+                            key={o.toString()}
+                            value={o}>
+                            {capitalize(o.toString())}
+                            </MenuItem>
+                        ))}
+                    </Select>
                 </FormControl>
             );
         default:
@@ -394,6 +426,10 @@ export const argumentDisplayFields: FieldDisplaySchema = {
         component: 'number',
         label: 'Frame length (seconds)',
     },
+    layer_info: {
+        component: 'select',
+        label: 'Layer type, Layer number',
+    },
     max_f0: {
         component: 'number',
         label: 'FO max (Hz)',
@@ -485,9 +521,17 @@ export const analysisDisplayFields: FieldDisplaySchema = {
         component: 'checkbox',
         label: 'Filterbank',
     },
+    hubert_large_ls960_ft: {
+        component: 'checkbox',
+        label: 'HuBERT Large Finetuned',
+    },
     mfcc: {
         component: 'checkbox',
         label: 'MFCC',
+    },
+    mHuBERT_147: {
+        component: 'checkbox',
+        label: 'mHuBERT-147',
     },
     pitch_crepe: {
         component: 'checkbox',

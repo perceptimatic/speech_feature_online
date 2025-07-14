@@ -39,13 +39,13 @@ config_key="test-config.json"
 file_key="$(basename "${file_path}")"
 
 # put audio file in bucket
-docker-compose run --no-deps -v "${file_path}:/tmp/"${file_key}":ro" --entrypoint="python /code/scripts/upload_file.py /tmp/"${file_key}" "${file_key}""  worker
+docker compose run --no-deps -v "${file_path}:/tmp/"${file_key}":ro" --entrypoint="python /code/scripts/upload_file.py /tmp/"${file_key}" "${file_key}""  worker
 
 # add audio file path to config and store in host tmp dir
 echo $config_json | jq --arg file_key $file_key '.files += [$file_key]' > /tmp/${config_key}
 
 # put config in bucket
-docker-compose run --no-deps -v "/tmp/${config_key}:/tmp/${config_key}:ro" --entrypoint="python /code/scripts/upload_file.py /tmp/${config_key} ${config_key}" worker
+docker compose run --no-deps -v "/tmp/${config_key}:/tmp/${config_key}:ro" --entrypoint="python /code/scripts/upload_file.py /tmp/${config_key} ${config_key}" worker
 
 # argument passed to run script contains config path in s3 and bucket name so it can be retrieved by shennong runner
 run_arg_json=$(cat <<EOF

@@ -5,12 +5,14 @@ ARG USERNAME=worker
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+RUN echo "deb http://archive.debian.org/debian stretch main" > /etc/apt/sources.list
+
 # create a sudo user, useful when developing from within a container
 # https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && apt-get update \
-    && apt-get install -y sudo \
+    && apt-get install -y --allow-unauthenticated sudo \
     curl \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
@@ -18,7 +20,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 COPY ./environment.yml .
 
-RUN conda env update --name base --file environment.yml 
+RUN conda env update --name base --file environment.yml
+
+COPY ./requirements.txt .
+
+RUN pip install -r requirements.txt
 
 COPY . .
 

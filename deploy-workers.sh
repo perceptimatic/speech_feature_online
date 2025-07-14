@@ -8,4 +8,4 @@ PAT=$( cat .env | awk -F= '/GITHUB_PAT/ {print $2}')
 echo $PAT | docker login ghcr.io -u $OWNER --password-stdin
 
 docker pull ghcr.io/${OWNER}/sfo-worker:latest
-docker-compose -f docker-compos.prod.yaml up -d worker notification-worker beat-scheduler
+docker compose -f docker-compose.prod.yaml up -d worker notification-worker beat-scheduler
